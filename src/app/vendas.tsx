@@ -1,0 +1,511 @@
+import { useEffect, useState } from "react";
+import {
+    View, Text, FlatList, StyleSheet, ActivityIndicator,
+    RefreshControl, TouchableOpacity, Alert, Modal,
+    ScrollView, KeyboardAvoidingView, Platform, TextInput,
+} from "react-native";
+import { router } from "expo-router";
+import { colors } from "../styles/global";
+import { getVendas, getProdutos, createVenda, updateVendaStatus } from "../api/api";
+
+interface VendaItem {
+    produtoId:     string;
+    produtoNome:   string;
+    quantidade:    number;
+    precoUnitario: number;
+    subTotal:      number;
+}
+
+interface Venda {
+    id:          string;
+    usuarioNome: string;
+    valorTotal:  number;
+    status:      "ABERTA" | "FINALIZADA" | "CANCELADA";
+    dataVenda:   string;
+    observacao:  string;
+    itens:       VendaItem[];
+}
+
+interface Produto {
+    id:                string;
+    nome:              string;
+    preco:             number;
+    quantidadeEstoque: number;
+    ativo:             boolean;
+}
+
+interface ItemForm {
+    produto:    Produto;
+    quantidade: number;
+}
+
+const STATUS_CORES: Record<string, { bg: string; text: string }> = {
+    FINALIZADA: { bg: "#d4edd9", text: "#1a5c36" },
+    ABERTA:     { bg: "#fef6df", text: "#B8922A" },
+    CANCELADA:  { bg: "#fce4df", text: "#8a3a2a" },
+};
+
+const FILTROS = ["Todos", "ABERTA", "FINALIZADA", "CANCELADA"];
+const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",");
+
+export default function VendasScreen() {
+    const [vendas,    setVendas]    = useState<Venda[]>([]);
+    const [produtos,  setProdutos]  = useState<Produto[]>([]);
+    const [filtro,    setFiltro]    = useState("Todos");
+    const [expandida, setExpandida] = useState<string | null>(null);
+    const [load,      setLoad]      = useState(true);
+    const [refresh,   setRefresh]   = useState(false);
+
+    // Modal nova venda
+    const [modalVis,  setModalVis]  = useState(false);
+    const [itens,     setItens]     = useState<ItemForm[]>([]);
+    const [prodSel,   setProdSel]   = useState<Produto | null>(null);
+    const [qtd,       setQtd]       = useState(1);
+    const [obs,       setObs]       = useState("");
+    const [salvando,  setSalvando]  = useState(false);
+    const [selVis,    setSelVis]    = useState(false);
+
+    const carregar = async () => {
+        try {
+            const [v, p] = await Promise.all([getVendas(), getProdutos()]);
+            setVendas(v);
+            setProdutos(p);
+            if (p.length > 0) setProdSel(p[0]);
+        } finally {
+            setLoad(false);
+            setRefresh(false);
+        }
+    };
+
+    useEffect(() => { carregar(); }, []);
+
+    const filtradas = filtro === "Todos"
+        ? vendas
+        : vendas.filter(v => v.status === filtro);
+
+    const totalFin = filtradas
+        .filter(v => v.status === "FINALIZADA")
+        .reduce((s, v) => s + v.valorTotal, 0);
+
+    const addItem = () => {
+        if (!prodSel) return;
+        const existe = itens.find(i => i.produto.id === prodSel.id);
+        if (existe) {
+            setItens(itens.map(i =>
+                i.produto.id === prodSel.id
+                    ? { ...i, quantidade: i.quantidade + qtd }
+                    : i
+            ));
+        } else {
+            setItens([...itens, { produto: prodSel, quantidade: qtd }]);
+        }
+    };
+
+    const removeItem = (id: string) =>
+        setItens(itens.filter(i => i.produto.id !== id));
+
+    const totalVenda = itens.reduce((s, i) => s + i.produto.preco * i.quantidade, 0);
+
+    const salvarVenda = async () => {
+        if (itens.length === 0) {
+            Alert.alert("Atenção", "Adicione ao menos um item.");
+            return;
+        }
+        setSalvando(true);
+        try {
+            const payload = {
+                observacao: obs || null,
+                clienteId:  null,
+                status:     "ABERTA",
+                itens: itens.map(i => ({
+                    produtoId:  i.produto.id,
+                    quantidade: i.quantidade,
+                })),
+            };
+
+            console.log("PAYLOAD VENDA:", JSON.stringify(payload, null, 2));
+
+            await createVenda(payload);
+            setModalVis(false);
+            setItens([]);
+            setObs("");
+            carregar();
+        } catch (e: any) {
+            Alert.alert("Erro", e.message || "Erro ao registrar venda.");
+        } finally {
+            setSalvando(false);
+        }
+    };
+
+    const cancelarVenda = (v: Venda) => {
+        Alert.alert(
+            "Cancelar Venda",
+            `Cancelar a venda de ${brl(v.valorTotal)}?`,
+            [
+                { text: "Não", style: "cancel" },
+                {
+                    text: "Sim, cancelar",
+                    style: "destructive",
+                    onPress: async () => {
+                        await updateVendaStatus(v.id, "CANCELADA");
+                        carregar();
+                    },
+                },
+            ]
+        );
+    };
+
+    const finalizarVenda = (v: Venda) => {
+        Alert.alert(
+            "Finalizar Venda",
+            `Finalizar a venda de ${brl(v.valorTotal)}?`,
+            [
+                { text: "Não", style: "cancel" },
+                {
+                    text: "Finalizar",
+                    onPress: async () => {
+                        await updateVendaStatus(v.id, "FINALIZADA");
+                        carregar();
+                    },
+                },
+            ]
+        );
+    };
+
+    if (load) return (
+        <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+    );
+
+    return (
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
+                    <Text style={styles.voltar}>← Voltar</Text>
+                </TouchableOpacity>
+                <View style={styles.headerRow}>
+                    <View>
+                        <Text style={styles.headerTitle}>🌺 Vendas</Text>
+                        <Text style={styles.headerSub}>
+                            Finalizadas: {brl(totalFin)}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.novoBtn}
+                        onPress={() => setModalVis(true)}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.novoBtnText}>+ Nova</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Filtros */}
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filtrosScroll}
+                contentContainerStyle={styles.filtros}
+            >
+                {FILTROS.map(f => (
+                    <TouchableOpacity
+                        key={f}
+                        style={[styles.filtroBtn, filtro === f && styles.filtroBtnAtivo]}
+                        onPress={() => setFiltro(f)}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={[styles.filtroText, filtro === f && styles.filtroTextAtivo]}>
+                            {f}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
+
+            {/* Lista */}
+            <FlatList
+                data={filtradas}
+                keyExtractor={item => item.id}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refresh}
+                        onRefresh={() => { setRefresh(true); carregar(); }}
+                        tintColor={colors.primary}
+                    />
+                }
+                ListEmptyComponent={
+                    <Text style={styles.empty}>Nenhuma venda encontrada.</Text>
+                }
+                contentContainerStyle={{ paddingBottom: 32 }}
+                renderItem={({ item: v }) => {
+                    const sc       = STATUS_CORES[v.status] ?? { bg: "#eee", text: "#666" };
+                    const aberta   = expandida === v.id;
+
+                    return (
+                        <TouchableOpacity
+                            style={styles.card}
+                            onPress={() => setExpandida(aberta ? null : v.id)}
+                            activeOpacity={0.9}
+                        >
+                            {/* Linha principal */}
+                            <View style={styles.cardTop}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.cardNome}>{v.usuarioNome || "—"}</Text>
+                                    <Text style={styles.cardData}>
+                                        {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
+                                    </Text>
+                                </View>
+                                <View style={{ alignItems: "flex-end" }}>
+                                    <Text style={styles.cardValor}>{brl(v.valorTotal)}</Text>
+                                    <View style={[styles.badge, { backgroundColor: sc.bg }]}>
+                                        <Text style={[styles.badgeText, { color: sc.text }]}>
+                                            {v.status}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Itens expandidos */}
+                            {aberta && (
+                                <View style={styles.itensBox}>
+                                    {(v.itens || []).map((it, j) => (
+                                        <View key={j} style={styles.itemRow}>
+                                            <Text style={styles.itemNome}>
+                                                {it.produtoNome} × {it.quantidade}
+                                            </Text>
+                                            <Text style={styles.itemValor}>{brl(it.subTotal)}</Text>
+                                        </View>
+                                    ))}
+
+                                    {v.observacao ? (
+                                        <Text style={styles.obs}>Obs: {v.observacao}</Text>
+                                    ) : null}
+
+                                    {/* Ações */}
+                                    {v.status === "ABERTA" && (
+                                        <View style={styles.acoes}>
+                                            <TouchableOpacity
+                                                style={styles.finalizarBtn}
+                                                onPress={() => finalizarVenda(v)}
+                                                activeOpacity={0.8}
+                                            >
+                                                <Text style={styles.finalizarText}>Finalizar</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.cancelarBtn}
+                                                onPress={() => cancelarVenda(v)}
+                                                activeOpacity={0.8}
+                                            >
+                                                <Text style={styles.cancelarText}>Cancelar</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    );
+                }}
+            />
+
+            {/* Modal nova venda */}
+            <Modal visible={modalVis} animationType="slide" transparent>
+                <KeyboardAvoidingView
+                    style={styles.modalOverlay}
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                >
+                    <View style={styles.modalBox}>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <Text style={styles.modalTitle}>Nova Venda</Text>
+
+                            {/* Seleção de produto */}
+                            <Text style={styles.label}>Produto</Text>
+                            <TouchableOpacity
+                                style={styles.seletor}
+                                onPress={() => setSelVis(true)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.seletorText}>
+                                    {prodSel ? `${prodSel.nome} — ${brl(prodSel.preco)}` : "Selecionar…"}
+                                </Text>
+                                <Text style={styles.seletorArrow}>▼</Text>
+                            </TouchableOpacity>
+
+                            {/* Quantidade */}
+                            <Text style={styles.label}>Quantidade</Text>
+                            <View style={styles.qtdRow}>
+                                <TouchableOpacity
+                                    style={styles.qtdBtn}
+                                    onPress={() => setQtd(q => Math.max(1, q - 1))}
+                                >
+                                    <Text style={styles.qtdBtnText}>−</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.qtdVal}>{qtd}</Text>
+                                <TouchableOpacity
+                                    style={styles.qtdBtn}
+                                    onPress={() => setQtd(q => q + 1)}
+                                >
+                                    <Text style={styles.qtdBtnText}>+</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.addBtn}
+                                    onPress={addItem}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.addBtnText}>+ Adicionar</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Itens adicionados */}
+                            {itens.length > 0 && (
+                                <View style={styles.itensForm}>
+                                    {itens.map(i => (
+                                        <View key={i.produto.id} style={styles.itemFormRow}>
+                                            <Text style={styles.itemFormNome}>
+                                                {i.produto.nome} × {i.quantidade}
+                                            </Text>
+                                            <Text style={styles.itemFormValor}>
+                                                {brl(i.produto.preco * i.quantidade)}
+                                            </Text>
+                                            <TouchableOpacity onPress={() => removeItem(i.produto.id)}>
+                                                <Text style={styles.removeItem}>×</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                    <Text style={styles.totalForm}>Total: {brl(totalVenda)}</Text>
+                                </View>
+                            )}
+
+                            {/* Observação */}
+                            <Text style={styles.label}>Observação</Text>
+                            <TextInput
+                                style={[styles.input, styles.textarea]}
+                                value={obs}
+                                onChangeText={setObs}
+                                placeholder="Notas sobre a venda…"
+                                placeholderTextColor={colors.muted}
+                                multiline
+                                numberOfLines={3}
+                            />
+
+                            <View style={styles.modalAcoes}>
+                                <TouchableOpacity
+                                    style={styles.modalCancelarBtn}
+                                    onPress={() => { setModalVis(false); setItens([]); }}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.modalCancelarText}>Cancelar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.salvarBtn, salvando && { opacity: 0.7 }]}
+                                    onPress={salvarVenda}
+                                    disabled={salvando}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.salvarText}>
+                                        {salvando ? "Salvando…" : "Registrar Venda"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Modal seleção de produto */}
+            <Modal visible={selVis} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Selecionar Produto</Text>
+                        <FlatList
+                            data={produtos.filter(p => p.ativo && p.quantidadeEstoque > 0)}
+                            keyExtractor={item => item.id}
+                            renderItem={({ item: p }) => (
+                                <TouchableOpacity
+                                    style={styles.produtoSelItem}
+                                    onPress={() => { setProdSel(p); setSelVis(false); }}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.produtoSelNome}>{p.nome}</Text>
+                                    <Text style={styles.produtoSelPreco}>{brl(p.preco)}</Text>
+                                </TouchableOpacity>
+                            )}
+                        />
+                        <TouchableOpacity
+                            style={styles.modalCancelarBtn}
+                            onPress={() => setSelVis(false)}
+                        >
+                            <Text style={styles.modalCancelarText}>Fechar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container:        { flex: 1, backgroundColor: colors.background },
+    center:           { flex: 1, justifyContent: "center", alignItems: "center" },
+    header:           { backgroundColor: colors.primaryDark, padding: 24, paddingTop: 56 },
+    voltar:           { color: colors.primaryLight, fontSize: 14, marginBottom: 8 },
+    headerRow:        { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    headerTitle:      { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
+    headerSub:        { fontSize: 13, color: colors.primaryLight },
+    novoBtn:          { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
+    novoBtnText:      { color: "#fff", fontWeight: "600", fontSize: 14 },
+    filtrosScroll:    { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 52 },
+    filtros:          { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+    filtroBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.background },
+    filtroBtnAtivo:   { backgroundColor: colors.primary },
+    filtroText:       { fontSize: 12, color: colors.muted, fontWeight: "500" },
+    filtroTextAtivo:  { color: "#fff" },
+    empty:            { textAlign: "center", color: colors.muted, marginTop: 40, fontSize: 14 },
+    card:             { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: 16, marginTop: 12, elevation: 2 },
+    cardTop:          { flexDirection: "row", alignItems: "center" },
+    cardNome:         { fontSize: 14, fontWeight: "700", color: colors.primaryDark },
+    cardData:         { fontSize: 11, color: colors.muted, marginTop: 2 },
+    cardValor:        { fontSize: 16, fontWeight: "700", color: colors.primaryDark },
+    badge:            { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, marginTop: 4 },
+    badgeText:        { fontSize: 10, fontWeight: "600" },
+    itensBox:         { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.background, paddingTop: 10 },
+    itemRow:          { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
+    itemNome:         { fontSize: 12, color: colors.muted },
+    itemValor:        { fontSize: 12, fontWeight: "600", color: colors.primaryDark },
+    obs:              { fontSize: 12, color: colors.muted, fontStyle: "italic", marginTop: 6 },
+    acoes:            { flexDirection: "row", gap: 8, marginTop: 12 },
+    finalizarBtn:     { flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, padding: 8, alignItems: "center" },
+    finalizarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
+    cancelarBtn:      { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
+    cancelarText:     { fontSize: 13, color: colors.rose, fontWeight: "600" },
+    // Modal
+    modalOverlay:     { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+    modalBox:         { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },
+    modalTitle:       { fontSize: 20, fontWeight: "700", color: colors.primaryDark, marginBottom: 20 },
+    label:            { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 6, marginTop: 8 },
+    input:            { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: 14, color: colors.text },
+    textarea:         { height: 80, textAlignVertical: "top" },
+    seletor:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 4 },
+    seletorText:      { fontSize: 14, color: colors.text, flex: 1 },
+    seletorArrow:     { fontSize: 12, color: colors.muted },
+    qtdRow:           { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 },
+    qtdBtn:           { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" },
+    qtdBtnText:       { fontSize: 20, color: colors.primaryDark, fontWeight: "600" },
+    qtdVal:           { fontSize: 16, fontWeight: "600", color: colors.primaryDark, minWidth: 30, textAlign: "center" },
+    addBtn:           { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, marginLeft: "auto" },
+    addBtnText:       { color: "#fff", fontSize: 13, fontWeight: "600" },
+    itensForm:        { backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 4 },
+    itemFormRow:      { flexDirection: "row", alignItems: "center", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
+    itemFormNome:     { flex: 1, fontSize: 13, color: colors.text },
+    itemFormValor:    { fontSize: 13, fontWeight: "600", color: colors.primaryDark, marginRight: 10 },
+    removeItem:       { fontSize: 20, color: colors.rose, lineHeight: 22 },
+    totalForm:        { textAlign: "right", fontSize: 16, fontWeight: "700", color: colors.primaryDark, marginTop: 8 },
+    modalAcoes:       { flexDirection: "row", gap: 12, marginTop: 20 },
+    modalCancelarBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center" },
+    modalCancelarText:{ fontSize: 14, color: colors.muted, fontWeight: "600" },
+    salvarBtn:        { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: "center" },
+    salvarText:       { fontSize: 14, color: "#fff", fontWeight: "600" },
+    produtoSelItem:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.background },
+    produtoSelNome:   { fontSize: 14, color: colors.text, flex: 1 },
+    produtoSelPreco:  { fontSize: 14, fontWeight: "600", color: colors.primaryDark },
+});

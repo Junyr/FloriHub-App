@@ -31,7 +31,7 @@ const CATEGORIAS = ["Rosa", "Buquê", "Arranjo", "Planta"];
 
 const CAT_CORES: Record<string, { bg: string; text: string }> = {
     Rosa:    { bg: "#F2DDD9", text: "#C4897A" },
-    Buquê:   { bg: "#D4EDE0", text: "#2D5A3D" },
+    Buque:   { bg: "#D4EDE0", text: "#2D5A3D" },
     Planta:  { bg: "#e0f0d4", text: "#3a6b2a" },
     Arranjo: { bg: "#fef0d0", text: "#B8922A" },
 };

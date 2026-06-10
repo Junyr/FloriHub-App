@@ -67,3 +67,5 @@ export const deleteProduto = (id: string) => request("DELETE", `/produtos/${id}`
 export const createVenda        = (dados: object) => request("POST", "/vendas", dados);
 export const updateVendaStatus  = (id: string, status: string) =>
     request("PATCH", `/vendas/${id}/status?status=${status}`);
+
+export const getUsuarios = () => request("GET", "/usuarios");

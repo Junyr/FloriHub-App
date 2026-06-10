@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../styles/global";
-import { getVendas, getProdutos, createVenda, updateVendaStatus } from "../api/api";
+import {getVendas, getProdutos, createVenda, updateVendaStatus, getUsuarios} from "../api/api";
 
 interface VendaItem {
     produtoId:     string;
@@ -18,7 +18,7 @@ interface VendaItem {
 
 interface Venda {
     id:          string;
-    usuarioNome: string;
+    usuarioId: string;
     valorTotal:  number;
     status:      "ABERTA" | "FINALIZADA" | "CANCELADA";
     dataVenda:   string;
@@ -51,6 +51,7 @@ const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",");
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
     const [produtos,  setProdutos]  = useState<Produto[]>([]);
+    const [usuarios, setUsuarios] = useState([]);
     const [filtro,    setFiltro]    = useState("Todos");
     const [expandida, setExpandida] = useState<string | null>(null);
     const [load,      setLoad]      = useState(true);
@@ -67,9 +68,10 @@ export default function VendasScreen() {
 
     const carregar = async () => {
         try {
-            const [v, p] = await Promise.all([getVendas(), getProdutos()]);
+            const [v, p, u] = await Promise.all([getVendas(), getProdutos(), getUsuarios()]);
             setVendas(v);
             setProdutos(p);
+            setUsuarios(u);
             if (p.length > 0) setProdSel(p[0]);
         } finally {
             setLoad(false);
@@ -115,8 +117,6 @@ export default function VendasScreen() {
         try {
             const payload = {
                 observacao: obs || null,
-                clienteId:  null,
-                status:     "ABERTA",
                 itens: itens.map(i => ({
                     produtoId:  i.produto.id,
                     quantidade: i.quantidade,
@@ -177,6 +177,16 @@ export default function VendasScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
         </View>
     );
+
+    const nomeUsuario = (id) => {
+        const u = usuarios.find((u) => u.id === id);
+        return u ? u.nome : "—";
+    };
+
+    const nomeProduto = (id) => {
+        const p = produtos.find((p) => p.id === id);
+        return p ? p.nome : "—";
+    };
 
     return (
         <View style={styles.container}>
@@ -251,7 +261,7 @@ export default function VendasScreen() {
                             {/* Linha principal */}
                             <View style={styles.cardTop}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.cardNome}>{v.usuarioNome || "—"}</Text>
+                                    <Text style={styles.cardNome}>{nomeUsuario(v.usuarioId) || "—"}</Text>
                                     <Text style={styles.cardData}>
                                         {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                     </Text>
@@ -272,7 +282,7 @@ export default function VendasScreen() {
                                     {(v.itens || []).map((it, j) => (
                                         <View key={j} style={styles.itemRow}>
                                             <Text style={styles.itemNome}>
-                                                {it.produtoNome} × {it.quantidade}
+                                                {nomeProduto(it.produtoId)} × {it.quantidade}
                                             </Text>
                                             <Text style={styles.itemValor}>{brl(it.subTotal)}</Text>
                                         </View>

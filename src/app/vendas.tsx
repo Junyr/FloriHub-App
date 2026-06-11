@@ -1,52 +1,23 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import {
-    View, Text, FlatList, StyleSheet, ActivityIndicator,
-    RefreshControl, TouchableOpacity, Alert, Modal,
-    ScrollView, KeyboardAvoidingView, Platform, TextInput,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { router } from "expo-router";
-import { colors } from "../styles/global";
-import {getVendas, getProdutos, createVenda, updateVendaStatus, getUsuarios} from "../api/api";
-
-interface VendaItem {
-    produtoId:     string;
-    produtoNome:   string;
-    quantidade:    number;
-    precoUnitario: number;
-    subTotal:      number;
-}
-
-interface Venda {
-    id:          string;
-    usuarioId: string;
-    valorTotal:  number;
-    status:      "ABERTA" | "FINALIZADA" | "CANCELADA";
-    dataVenda:   string;
-    observacao:  string;
-    itens:       VendaItem[];
-}
-
-interface Produto {
-    id:                string;
-    nome:              string;
-    preco:             number;
-    quantidadeEstoque: number;
-    ativo:             boolean;
-}
-
-interface ItemForm {
-    produto:    Produto;
-    quantidade: number;
-}
-
-const STATUS_CORES: Record<string, { bg: string; text: string }> = {
-    FINALIZADA: { bg: "#d4edd9", text: "#1a5c36" },
-    ABERTA:     { bg: "#fef6df", text: "#B8922A" },
-    CANCELADA:  { bg: "#fce4df", text: "#8a3a2a" },
-};
-
-const FILTROS = ["Todos", "ABERTA", "FINALIZADA", "CANCELADA"];
-const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",");
+import {router} from "expo-router";
+import {colors} from "../styles/global";
+import {createVenda, getProdutos, getUsuarios, getVendas, updateVendaStatus} from "../api/api";
+import {brl, FILTROS, ItemForm, nomeProduto, nomeUsuario, Produto, STATUS_CORES, Venda} from "@/utils/helpers";
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
@@ -178,16 +149,6 @@ export default function VendasScreen() {
         </View>
     );
 
-    const nomeUsuario = (id) => {
-        const u = usuarios.find((u) => u.id === id);
-        return u ? u.nome : "—";
-    };
-
-    const nomeProduto = (id) => {
-        const p = produtos.find((p) => p.id === id);
-        return p ? p.nome : "—";
-    };
-
     return (
         <View style={styles.container}>
             {/* Header */}
@@ -261,7 +222,7 @@ export default function VendasScreen() {
                             {/* Linha principal */}
                             <View style={styles.cardTop}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.cardNome}>{nomeUsuario(v.usuarioId) || "—"}</Text>
+                                    <Text style={styles.cardNome}>{nomeUsuario(v.usuarioId, usuarios) || "—"}</Text>
                                     <Text style={styles.cardData}>
                                         {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                     </Text>
@@ -282,7 +243,7 @@ export default function VendasScreen() {
                                     {(v.itens || []).map((it, j) => (
                                         <View key={j} style={styles.itemRow}>
                                             <Text style={styles.itemNome}>
-                                                {nomeProduto(it.produtoId)} × {it.quantidade}
+                                                {nomeProduto(it.produtoId, produtos)} × {it.quantidade}
                                             </Text>
                                             <Text style={styles.itemValor}>{brl(it.subTotal)}</Text>
                                         </View>

@@ -8,39 +8,7 @@ import { colors } from "../styles/global";
 import { getProdutos, createProduto, updateProduto, deleteProduto } from "../api/api";
 // Adicione o import no topo
 import { router } from "expo-router";
-
-interface Produto {
-    id:                string;
-    nome:              string;
-    descricao:         string;
-    preco:             number;
-    quantidadeEstoque: number;
-    categoria:         string;
-    ativo:             boolean;
-}
-
-interface FormProduto {
-    nome:              string;
-    descricao:         string;
-    preco:             string;
-    quantidadeEstoque: string;
-    categoria:         string;
-}
-
-const CATEGORIAS = ["Rosa", "Buquê", "Arranjo", "Planta"];
-
-const CAT_CORES: Record<string, { bg: string; text: string }> = {
-    Rosa:    { bg: "#F2DDD9", text: "#C4897A" },
-    Buque:   { bg: "#D4EDE0", text: "#2D5A3D" },
-    Planta:  { bg: "#e0f0d4", text: "#3a6b2a" },
-    Arranjo: { bg: "#fef0d0", text: "#B8922A" },
-};
-
-const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",");
-
-const FORM_VAZIO: FormProduto = {
-    nome: "", descricao: "", preco: "", quantidadeEstoque: "", categoria: "Rosa",
-};
+import {brl, CAT_CORES, CATEGORIAS, FORM_VAZIO, FormProduto, Produto } from "@/utils/helpers";
 
 export default function ProdutosScreen() {
     const [produtos,   setProdutos]   = useState<Produto[]>([]);

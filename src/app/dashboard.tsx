@@ -1,53 +1,34 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import {
-    View, Text, ScrollView, StyleSheet,
-    ActivityIndicator, RefreshControl,
-    TouchableOpacity, Alert, // ← adicione esses dois
+    ActivityIndicator,
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors } from "../styles/global";
-import { getVendas, getProdutos } from "../api/api";
-import { brl } from "../utils/helpers";
-import { router } from "expo-router";
-import { logout } from "../api/api";
-
-interface Venda {
-    id:          string;
-    usuarioNome: string;
-    valorTotal:  number;
-    status:      "ABERTA" | "FINALIZADA" | "CANCELADA";
-    dataVenda:   string;
-}
-
-interface Produto {
-    id:                string;
-    nome:              string;
-    quantidadeEstoque: number;
-    ativo:             boolean;
-}
-
-interface Usuario {
-    nome: string;
-}
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-    FINALIZADA: { bg: "#d4edd9", text: "#1a5c36" },
-    ABERTA:     { bg: "#fef6df", text: "#B8922A" },
-    CANCELADA:  { bg: "#fce4df", text: "#8a3a2a" },
-};
+import {colors} from "../styles/global";
+import {getProdutos, getUsuarios, getVendas, logout} from "../api/api";
+import {brl, nomeUsuario, Produto, STATUS_CORES, Usuario, Venda} from "../utils/helpers";
+import {router} from "expo-router";
 
 export default function DashboardScreen() {
     const [vendas,   setVendas]   = useState<Venda[]>([]);
     const [produtos, setProdutos] = useState<Produto[]>([]);
-    const [usuario,  setUsuario]  = useState<Usuario | null>(null);
+    const [usuarios,  setUsuarios]  = useState<Usuario[]>([]);
+    const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
     const [load,     setLoad]     = useState(true);
     const [refresh,  setRefresh]  = useState(false);
 
     const carregar = async () => {
         try {
-            const [v, p] = await Promise.all([getVendas(), getProdutos()]);
+            const [v, p, u] = await Promise.all([getVendas(), getProdutos(), getUsuarios()]);
             setVendas(v);
             setProdutos(p);
+            setUsuarios(u);
         } finally {
             setLoad(false);
             setRefresh(false);
@@ -56,7 +37,7 @@ export default function DashboardScreen() {
 
     useEffect(() => {
         AsyncStorage.getItem("florihub_usuario").then((u) => {
-            if (u) setUsuario(JSON.parse(u));
+            if (u) setUsuarioLogado(JSON.parse(u)); // ← estado separado
         });
         carregar();
     }, []);
@@ -91,7 +72,7 @@ export default function DashboardScreen() {
                     <View>
                         <Text style={styles.headerTitle}>🌺 FloriHub</Text>
                         <Text style={styles.headerSub}>
-                            Olá, {usuario?.nome?.split(" ")[0] || "..."} 👋
+                            Olá, {usuarioLogado?.nome?.split(" ")[0] || "..."} 👋
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -167,19 +148,18 @@ export default function DashboardScreen() {
             {vendas.length === 0
                 ? <Text style={styles.empty}>Nenhuma venda registrada.</Text>
                 : vendas.slice(0, 5).map(v => {
-                    const sc = STATUS_COLORS[v.status] || { bg: "#eee", text: "#666" };
                     return (
                         <View key={v.id} style={styles.vendaRow}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.vendaNome}>{v.usuarioNome || "—"}</Text>
+                                <Text style={styles.vendaNome}>{nomeUsuario(v.usuarioId, usuarios) || "—"}</Text>
                                 <Text style={styles.vendaData}>
                                     {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                 </Text>
                             </View>
                             <View style={{ alignItems: "flex-end" }}>
                                 <Text style={styles.vendaValor}>{brl(v.valorTotal)}</Text>
-                                <View style={[styles.badge, { backgroundColor: sc.bg }]}>
-                                    <Text style={[styles.badgeText, { color: sc.text }]}>{v.status}</Text>
+                                <View style={[styles.badge, { backgroundColor: STATUS_CORES[v.status].bg }]}>
+                                    <Text style={[styles.badgeText, { color: STATUS_CORES[v.status].text }]}>{v.status}</Text>
                                 </View>
                             </View>
                         </View>

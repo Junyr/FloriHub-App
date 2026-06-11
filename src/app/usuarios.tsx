@@ -8,31 +8,7 @@ import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "../styles/global";
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "../api/api";
-
-interface Usuario {
-    id:        string;
-    nome:      string;
-    email:     string;
-    role:      "ADMIN" | "VENDEDOR";
-    ativo:     boolean;
-    criadoEm: string;
-}
-
-interface FormUsuario {
-    nome:  string;
-    email: string;
-    senha: string;
-    role:  "ADMIN" | "VENDEDOR";
-}
-
-const FORM_VAZIO: FormUsuario = {
-    nome: "", email: "", senha: "", role: "VENDEDOR",
-};
-
-const ROLE_CORES: Record<string, { bg: string; text: string }> = {
-    ADMIN:    { bg: "#D4EDE0", text: "#1C3829" },
-    VENDEDOR: { bg: "#EEF7F2", text: "#2D5A3D" },
-};
+import {FORM_VAZIO_USUARIO, FormUsuario, ROLE_CORES, Usuario} from "@/utils/helpers";
 
 export default function UsuariosScreen() {
     const [usuarios,  setUsuarios]  = useState<Usuario[]>([]);
@@ -40,7 +16,7 @@ export default function UsuariosScreen() {
     const [refresh,   setRefresh]   = useState(false);
     const [modalVis,  setModalVis]  = useState(false);
     const [editando,  setEditando]  = useState<Usuario | null>(null);
-    const [form,      setForm]      = useState<FormUsuario>(FORM_VAZIO);
+    const [form,      setForm]      = useState<FormUsuario>(FORM_VAZIO_USUARIO);
     const [salvando,  setSalvando]  = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<{ role: string } | null>(null);
 
@@ -77,7 +53,7 @@ export default function UsuariosScreen() {
 
     const abrirCriar = () => {
         setEditando(null);
-        setForm(FORM_VAZIO);
+        setForm(FORM_VAZIO_USUARIO);
         setModalVis(true);
     };
 

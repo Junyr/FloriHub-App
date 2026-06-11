@@ -69,3 +69,6 @@ export const updateVendaStatus  = (id: string, status: string) =>
     request("PATCH", `/vendas/${id}/status?status=${status}`);
 
 export const getUsuarios = () => request("GET", "/usuarios");
+export const createUsuario = (dados: object) => request("POST", "/usuarios", dados);
+export const updateUsuario = (id: string, dados: object) => request("PUT", `/usuarios/${id}`, dados);
+export const deleteUsuario = (id: string) => request("DELETE", `/usuarios/${id}`);

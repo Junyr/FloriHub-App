@@ -135,7 +135,7 @@ export default function DashboardScreen() {
 
                 <TouchableOpacity
                     style={styles.atalhoBtn}
-                    onPress={() => {}/*router.push(/*"/usuarios")*/}
+                    onPress={() => router.push("/usuarios")}
                     activeOpacity={0.8}
                 >
                     <Text style={styles.atalhoEmoji}>🌱</Text>

@@ -92,7 +92,7 @@ export default function DashboardScreen() {
                             ])
                         }
                     >
-                        <Text style={styles.logoutText}>⏻</Text>
+                        <Text style={styles.logoutText}>Sair</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -213,6 +213,6 @@ const styles = StyleSheet.create({
     atalhoEmoji:{ fontSize: 28, marginBottom: 6 },
     atalhoText: { fontSize: 13, fontWeight: "600", color: colors.primaryDark },
     headerRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    logoutBtn:  { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, padding: 10 },
-    logoutText: { color: "#fff", fontSize: 18 },
+    logoutBtn:  { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+    logoutText: { color: "#fff", fontSize: 13, fontWeight: "600" },
 });

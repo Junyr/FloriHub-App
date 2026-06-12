@@ -27,13 +27,16 @@ export interface VendaItem {
 }
 
 export interface Venda {
-    id:          string;
-    usuarioId: string;
-    valorTotal:  number;
-    status:      "ABERTA" | "FINALIZADA" | "CANCELADA";
-    dataVenda:   string;
-    observacao:  string;
-    itens:       VendaItem[];
+    id:           string;
+    usuarioId:    string;
+    nomeVendedor: string;
+    clienteId:    string;
+    nomeCliente:  string;
+    valorTotal:   number;
+    status:       "ABERTA" | "FINALIZADA" | "CANCELADA";
+    dataVenda:    string;
+    observacao:   string;
+    itens:        VendaItem[];
 }
 
 export interface Produto {
@@ -88,9 +91,19 @@ export const ROLE_CORES: Record<string, { bg: string; text: string }> = {
 export const brl = (v: number) =>
     "R$ " + v.toFixed(2).replace(".", ",");
 
-export const nomeUsuario = (id: string, usuarios: { id: string; nome: string }[]) => {
+export const nomeUsuario = (
+    id: string,
+    usuarios: { id: string; nome: string }[],
+    usuarioLogado?: Usuario | null
+) => {
+    // ADMIN — procura na lista completa
     const u = usuarios.find((u) => u.id === id);
-    return u ? u.nome : "—";
+    if (u) return u.nome;
+
+    // VENDEDOR — é sempre ele mesmo
+    if (usuarioLogado?.id === id) return usuarioLogado.nome;
+
+    return "—";
 };
 
 export const nomeProduto = (id: string, produtos: { id: string; nome: string }[]) => {

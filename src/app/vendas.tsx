@@ -17,12 +17,14 @@ import {
 import {router} from "expo-router";
 import {colors} from "../styles/global";
 import {createVenda, getProdutos, getUsuarios, getVendas, updateVendaStatus} from "../api/api";
-import {brl, FILTROS, ItemForm, nomeProduto, nomeUsuario, Produto, STATUS_CORES, Venda} from "@/utils/helpers";
+import {brl, FILTROS, ItemForm, nomeProduto, nomeUsuario, Produto, STATUS_CORES, Usuario, Venda} from "@/utils/helpers";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
     const [produtos,  setProdutos]  = useState<Produto[]>([]);
     const [usuarios, setUsuarios] = useState([]);
+    const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
     const [filtro,    setFiltro]    = useState("Todos");
     const [expandida, setExpandida] = useState<string | null>(null);
     const [load,      setLoad]      = useState(true);
@@ -39,18 +41,28 @@ export default function VendasScreen() {
 
     const carregar = async () => {
         try {
-            const [v, p, u] = await Promise.all([getVendas(), getProdutos(), getUsuarios()]);
-            setVendas(v);
-            setProdutos(p);
-            setUsuarios(u);
-            if (p.length > 0) setProdSel(p[0]);
+            const isAdmin = usuarioLogado?.role === "ADMIN";
+            const requests = isAdmin
+                ? [getVendas(), getProdutos(), getUsuarios()]
+                : [getVendas(), getProdutos()];
+
+            const results = await Promise.all(requests);
+            setVendas(results[0]);
+            setProdutos(results[1]);
+            if (isAdmin) setUsuarios(results[2]);
         } finally {
             setLoad(false);
             setRefresh(false);
         }
     };
 
-    useEffect(() => { carregar(); }, []);
+    useEffect(() => {
+        AsyncStorage.getItem("florihub_usuario").then((u) => {
+            if (u) setUsuarioLogado(JSON.parse(u)); // ← estado separado
+            console.log("LOGIN RESPONSE:", JSON.stringify(u));
+        });
+        carregar();
+    }, []);
 
     const filtradas = filtro === "Todos"
         ? vendas
@@ -93,8 +105,6 @@ export default function VendasScreen() {
                     quantidade: i.quantidade,
                 })),
             };
-
-            console.log("PAYLOAD VENDA:", JSON.stringify(payload, null, 2));
 
             await createVenda(payload);
             setModalVis(false);
@@ -222,9 +232,11 @@ export default function VendasScreen() {
                             {/* Linha principal */}
                             <View style={styles.cardTop}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.cardNome}>{nomeUsuario(v.usuarioId, usuarios) || "—"}</Text>
+                                    <Text style={styles.cardNome}>
+                                        {v.nomeCliente || "Consumidor Final"}
+                                    </Text>
                                     <Text style={styles.cardData}>
-                                        {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
+                                        Vendedor: {v.nomeVendedor} • {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                     </Text>
                                 </View>
                                 <View style={{ alignItems: "flex-end" }}>

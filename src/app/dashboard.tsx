@@ -25,10 +25,15 @@ export default function DashboardScreen() {
 
     const carregar = async () => {
         try {
-            const [v, p, u] = await Promise.all([getVendas(), getProdutos(), getUsuarios()]);
-            setVendas(v);
-            setProdutos(p);
-            setUsuarios(u);
+            const isAdmin = usuarioLogado?.role === "ADMIN";
+            const requests = isAdmin
+                ? [getVendas(), getProdutos(), getUsuarios()]
+                : [getVendas(), getProdutos()];
+
+            const results = await Promise.all(requests);
+            setVendas(results[0]);
+            setProdutos(results[1]);
+            if (isAdmin) setUsuarios(results[2]);
         } finally {
             setLoad(false);
             setRefresh(false);
@@ -151,9 +156,11 @@ export default function DashboardScreen() {
                     return (
                         <View key={v.id} style={styles.vendaRow}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.vendaNome}>{nomeUsuario(v.usuarioId, usuarios) || "—"}</Text>
+                                <Text style={styles.vendaNome}>
+                                    {v.nomeCliente || "Consumidor Final"}
+                                </Text>
                                 <Text style={styles.vendaData}>
-                                    {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
+                                    Vendedor: {v.nomeVendedor} • {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                 </Text>
                             </View>
                             <View style={{ alignItems: "flex-end" }}>

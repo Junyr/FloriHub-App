@@ -184,25 +184,26 @@ export default function VendasScreen() {
             </View>
 
             {/* Filtros */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filtrosScroll}
-                contentContainerStyle={styles.filtros}
-            >
-                {FILTROS.map(f => (
-                    <TouchableOpacity
-                        key={f}
-                        style={[styles.filtroBtn, filtro === f && styles.filtroBtnAtivo]}
-                        onPress={() => setFiltro(f)}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={[styles.filtroText, filtro === f && styles.filtroTextAtivo]}>
-                            {f}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
+            <View style={styles.filtrosContainer}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filtros}
+                >
+                    {FILTROS.map(f => (
+                        <TouchableOpacity
+                            key={f}
+                            style={[styles.filtroBtn, filtro === f && styles.filtroBtnAtivo]}
+                            onPress={() => setFiltro(f)}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={[styles.filtroText, filtro === f && styles.filtroTextAtivo]}>
+                                {f}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
 
             {/* Lista */}
             <FlatList
@@ -437,8 +438,8 @@ const styles = StyleSheet.create({
     headerSub:        { fontSize: 13, color: colors.primaryLight },
     novoBtn:          { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
     novoBtnText:      { color: "#fff", fontWeight: "600", fontSize: 14 },
-    filtrosScroll:    { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 52 },
-    filtros:          { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+    filtrosContainer: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border, height: 52 },
+    filtros:          { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, gap: 8, alignItems: "center" },
     filtroBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.background },
     filtroBtnAtivo:   { backgroundColor: colors.primary },
     filtroText:       { fontSize: 12, color: colors.muted, fontWeight: "500" },

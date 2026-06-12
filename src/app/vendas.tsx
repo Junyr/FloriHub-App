@@ -68,7 +68,7 @@ export default function VendasScreen() {
         ? vendas
         : vendas.filter(v => v.status === filtro);
 
-    const totalFin = filtradas
+    const totalFin = vendas
         .filter(v => v.status === "FINALIZADA")
         .reduce((s, v) => s + v.valorTotal, 0);
 

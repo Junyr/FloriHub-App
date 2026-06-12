@@ -17,7 +17,18 @@ import {
 import {router} from "expo-router";
 import {colors} from "../styles/global";
 import {createVenda, getProdutos, getUsuarios, getVendas, updateVendaStatus} from "../api/api";
-import {brl, FILTROS, ItemForm, nomeProduto, nomeUsuario, Produto, STATUS_CORES, Usuario, Venda} from "@/utils/helpers";
+import {
+    brl,
+    FILTROS,
+    ItemForm,
+    mascaraData,
+    nomeProduto,
+    nomeUsuario, parseData,
+    Produto,
+    STATUS_CORES,
+    Usuario,
+    Venda
+} from "@/utils/helpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function VendasScreen() {
@@ -25,6 +36,10 @@ export default function VendasScreen() {
     const [produtos,  setProdutos]  = useState<Produto[]>([]);
     const [usuarios, setUsuarios] = useState([]);
     const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
+    const [busca,      setBusca]      = useState("");
+    const [dataInicio, setDataInicio] = useState("");
+    const [dataFim,    setDataFim]    = useState("");
+    const [buscaVis,   setBuscaVis]   = useState(false);
     const [filtro,    setFiltro]    = useState("Todos");
     const [expandida, setExpandida] = useState<string | null>(null);
     const [load,      setLoad]      = useState(true);
@@ -64,9 +79,26 @@ export default function VendasScreen() {
         carregar();
     }, []);
 
-    const filtradas = filtro === "Todos"
-        ? vendas
-        : vendas.filter(v => v.status === filtro);
+    const filtradas = vendas
+        .filter(v => filtro === "Todos" || v.status === filtro)
+        .filter(v => {
+            if (!busca) return true;
+            return (v.nomeCliente || "Consumidor Final")
+                .toLowerCase()
+                .includes(busca.toLowerCase());
+        })
+        .filter(v => {
+            if (!dataInicio && !dataFim) return true;
+
+            const data = new Date(v.dataVenda);
+            const inicio = dataInicio ? parseData(dataInicio) : null;
+            const fim    = dataFim    ? parseData(dataFim, true) : null;
+
+            if (inicio && data < inicio) return false;
+            if (fim    && data > fim)    return false;
+
+            return true;
+        })
 
     const totalFin = vendas
         .filter(v => v.status === "FINALIZADA")
@@ -169,19 +201,67 @@ export default function VendasScreen() {
                 <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.headerTitle}>🌺 Vendas</Text>
-                        <Text style={styles.headerSub}>
-                            Finalizadas: {brl(totalFin)}
-                        </Text>
+                        <Text style={styles.headerSub}>Finalizadas: {brl(totalFin)}</Text>
                     </View>
-                    <TouchableOpacity
-                        style={styles.novoBtn}
-                        onPress={() => setModalVis(true)}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.novoBtnText}>+ Nova</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                        <TouchableOpacity
+                            style={styles.buscaBtn}
+                            onPress={() => setBuscaVis(!buscaVis)}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.novoBtnText}>🔍</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.novoBtn}
+                            onPress={() => setModalVis(true)}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.novoBtnText}>+ Nova</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
+
+            {/* Painel de busca */}
+            {buscaVis && (
+                <View style={styles.buscaPanel}>
+                    <TextInput
+                        style={styles.buscaInput}
+                        placeholder="Buscar por cliente…"
+                        placeholderTextColor={colors.muted}
+                        value={busca}
+                        onChangeText={setBusca}
+                    />
+                    <View style={styles.buscaDatas}>
+                        <TextInput
+                            style={[styles.buscaInput, { flex: 1 }]}
+                            placeholder="Início DD/MM/AAAA"
+                            placeholderTextColor={colors.muted}
+                            value={dataInicio}
+                            onChangeText={(t) => setDataInicio(mascaraData(t))}
+                            keyboardType="numeric"
+                            maxLength={10}
+                        />
+                        <TextInput
+                            style={[styles.buscaInput, { flex: 1 }]}
+                            placeholder="Fim DD/MM/AAAA"
+                            placeholderTextColor={colors.muted}
+                            value={dataFim}
+                            onChangeText={(t) => setDataFim(mascaraData(t))}
+                            keyboardType="numeric"
+                            maxLength={10}
+                        />
+                    </View>
+                    {(busca || dataInicio || dataFim) && (
+                        <TouchableOpacity
+                            onPress={() => { setBusca(""); setDataInicio(""); setDataFim(""); }}
+                            style={styles.limparBtn}
+                        >
+                            <Text style={styles.limparText}>Limpar filtros</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
 
             {/* Filtros */}
             <View style={styles.filtrosContainer}>
@@ -462,6 +542,12 @@ const styles = StyleSheet.create({
     finalizarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
     cancelarBtn:      { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
     cancelarText:     { fontSize: 13, color: colors.rose, fontWeight: "600" },
+    buscaBtn:    { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+    buscaPanel:  { backgroundColor: "#fff", padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
+    buscaInput:  { backgroundColor: colors.background, borderRadius: 8, padding: 10, fontSize: 13, color: colors.text },
+    buscaDatas:  { flexDirection: "row", gap: 8 },
+    limparBtn:   { alignItems: "center", paddingVertical: 6 },
+    limparText:  { fontSize: 12, color: colors.rose, fontWeight: "600" },
     // Modal
     modalOverlay:     { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:         { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },

@@ -1,3 +1,5 @@
+import {router} from "expo-router";
+
 export interface TopProduto {
     nomeProduto:      string;
     quantidadeVendida: number;
@@ -94,6 +96,14 @@ export interface FormProduto {
 
 export const CATEGORIAS = ["Rosa", "Buquê", "Arranjo", "Planta"];
 
+export const handleVoltar = () => {
+    if (router.canGoBack()) {
+        router.back();
+    } else {
+        router.replace("/dashboard");
+    }
+};
+
 export const CAT_CORES: Record<string, { bg: string; text: string }> = {
     Rosa:    { bg: "#F2DDD9", text: "#C4897A" },
     Buque:   { bg: "#D4EDE0", text: "#2D5A3D" },
@@ -131,7 +141,10 @@ export const parseData = (str: string, fimDoDia = false) => {
 };
 
 export const brl = (v: number) =>
-    "R$ " + v.toFixed(2).replace(".", ",");
+    v.toLocaleString("pt-BR", {
+        style:    "currency",
+        currency: "BRL",
+    });
 
 export const nomeUsuario = (
     id: string,

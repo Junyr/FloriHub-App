@@ -6,9 +6,7 @@ import {
 } from "react-native";
 import { colors } from "../styles/global";
 import { getProdutos, createProduto, updateProduto, deleteProduto } from "../api/api";
-// Adicione o import no topo
-import { router } from "expo-router";
-import {brl, CAT_CORES, CATEGORIAS, FORM_VAZIO, FormProduto, Produto } from "@/utils/helpers";
+import {brl, CAT_CORES, CATEGORIAS, FORM_VAZIO, FormProduto, handleVoltar, Produto} from "@/utils/helpers";
 
 export default function ProdutosScreen() {
     const [produtos,   setProdutos]   = useState<Produto[]>([]);
@@ -20,6 +18,7 @@ export default function ProdutosScreen() {
     const [editando,   setEditando]   = useState<Produto | null>(null);
     const [form,       setForm]       = useState<FormProduto>(FORM_VAZIO);
     const [salvando,   setSalvando]   = useState(false);
+    const numColunas = Platform.OS === "web" ? 3 : 1;
 
     const carregar = async () => {
         try {
@@ -119,7 +118,7 @@ export default function ProdutosScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity
-                    onPress={() => router.back()}
+                    onPress={handleVoltar}
                     activeOpacity={0.8}
                     style={styles.voltarBtn}
                 >
@@ -148,6 +147,13 @@ export default function ProdutosScreen() {
             <FlatList
                 data={filtrados}
                 keyExtractor={item => item.id}
+                numColumns={numColunas}
+                key={numColunas}
+                columnWrapperStyle={numColunas > 1 ? {
+                    gap: 12,
+                    paddingHorizontal: 16,
+                    alignItems: "stretch",  // ← força mesma altura
+                } : undefined}
                 refreshControl={
                     <RefreshControl
                         refreshing={refresh}
@@ -318,7 +324,7 @@ const styles = StyleSheet.create({
     novoBtn:       { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 16, justifyContent: "center" },
     novoBtnText:   { color: "#fff", fontWeight: "600", fontSize: 14 },
     empty:         { textAlign: "center", color: colors.muted, marginTop: 40, fontSize: 14 },
-    card:          { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: 16, marginTop: 12, elevation: 2 },
+    card:          { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: Platform.OS === "web" ? 0 : 16, marginTop: 12, elevation: 2, flex: 1, minHeight: 160, justifyContent: "space-between" },
     inativo:       { opacity: 0.5 },
     cardTop:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
     badge:         { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },

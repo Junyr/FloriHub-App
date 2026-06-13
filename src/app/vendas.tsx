@@ -19,7 +19,7 @@ import {colors} from "../styles/global";
 import {createVenda, getProdutos, getUsuarios, getVendas, updateVendaStatus} from "../api/api";
 import {
     brl,
-    FILTROS,
+    FILTROS, handleVoltar,
     ItemForm,
     mascaraData,
     nomeProduto,
@@ -196,7 +196,7 @@ export default function VendasScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity
-                    onPress={() => router.back()}
+                    onPress={handleVoltar}
                     activeOpacity={0.8}
                     style={styles.voltarBtn}
                 >
@@ -210,11 +210,11 @@ export default function VendasScreen() {
                     </View>
                     <View style={{ flexDirection: "row", gap: 8 }}>
                         <TouchableOpacity
-                            style={styles.buscaBtn}
+                            style={[styles.buscaBtn, buscaVis && styles.buscaBtnAtivo]}
                             onPress={() => setBuscaVis(!buscaVis)}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.novoBtnText}>🔍</Text>
+                            <Text style={styles.buscaBtnText}>⌕</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.novoBtn}
@@ -522,7 +522,13 @@ const styles = StyleSheet.create({
     headerTitle:      { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
     headerSub:        { fontSize: 13, color: colors.primaryLight },
     novoBtn:          { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
-    novoBtnText:      { color: "#fff", fontWeight: "600", fontSize: 14 },
+    novoBtnText:      {
+        color: "#fff",
+        fontSize: 14,
+        lineHeight: 22,      // ← força altura da linha
+        textAlign: "center", // ← centraliza horizontalmente
+        includeFontPadding: false, // ← remove padding extra do Android
+    },
     filtrosContainer: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border, height: 52 },
     filtros:          { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, gap: 8, alignItems: "center" },
     filtroBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.background },
@@ -547,7 +553,15 @@ const styles = StyleSheet.create({
     finalizarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
     cancelarBtn:      { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
     cancelarText:     { fontSize: 13, color: colors.rose, fontWeight: "600" },
-    buscaBtn:    { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+    buscaBtn:      { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, justifyContent: "center", alignItems: "center", width: 40, height: 40, paddingTop: Platform.OS === "web" ? 0 : 2 },
+    buscaBtnAtivo: { backgroundColor: "rgba(255,255,255,0.35)" },
+    buscaBtnText: {
+        color: "#fff",
+        fontSize: 23,
+        lineHeight: 22,      // ← força altura da linha
+        textAlign: "center", // ← centraliza horizontalmente
+        includeFontPadding: false, // ← remove padding extra do Android
+    },
     buscaPanel:  { backgroundColor: "#fff", padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
     buscaInput:  { backgroundColor: colors.background, borderRadius: 8, padding: 10, fontSize: 13, color: colors.text },
     buscaDatas:  { flexDirection: "row", gap: 8 },

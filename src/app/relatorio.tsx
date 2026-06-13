@@ -10,7 +10,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing   from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 
-import {brl, parseData, mascaraData, Relatorio} from "../utils/helpers";
+import {brl, parseData, mascaraData, Relatorio, handleVoltar} from "../utils/helpers";
 import { TextInput } from "react-native";
 import { FILTROS } from "../utils/helpers";
 
@@ -95,7 +95,7 @@ export default function RelatorioScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity
-                    onPress={() => router.back()}
+                    onPress={handleVoltar}
                     activeOpacity={0.8}
                     style={styles.voltarBtn}
                 >
@@ -224,7 +224,7 @@ export default function RelatorioScreen() {
                     </>
                 )}
                 {/* Botão flutuante de baixar PDF */}
-                {(dataInicio && (
+                {!!relatorio && !load && (
                     <TouchableOpacity
                         style={[styles.fab, baixando && { opacity: 0.7 }]}
                         onPress={baixarPdf}
@@ -235,7 +235,7 @@ export default function RelatorioScreen() {
                             {baixando ? "⏳ Baixando…" : "📄 Baixar PDF"}
                         </Text>
                     </TouchableOpacity>
-                ))}
+                )}
             </ScrollView>
         </View>
     );

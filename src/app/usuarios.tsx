@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "../styles/global";
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "../api/api";
-import {FORM_VAZIO_USUARIO, FormUsuario, ROLE_CORES, Usuario} from "@/utils/helpers";
+import {FORM_VAZIO_USUARIO, FormUsuario, handleVoltar, ROLE_CORES, Usuario} from "@/utils/helpers";
 
 export default function UsuariosScreen() {
     const [usuarios,  setUsuarios]  = useState<Usuario[]>([]);
@@ -19,6 +19,7 @@ export default function UsuariosScreen() {
     const [form,      setForm]      = useState<FormUsuario>(FORM_VAZIO_USUARIO);
     const [salvando,  setSalvando]  = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<{ role: string } | null>(null);
+    const numColunas = Platform.OS === "web" ? 3 : 1;
 
     const carregar = async () => {
         try {
@@ -125,7 +126,7 @@ export default function UsuariosScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity
-                    onPress={() => router.back()}
+                    onPress={handleVoltar}
                     activeOpacity={0.8}
                     style={styles.voltarBtn}
                 >
@@ -147,6 +148,13 @@ export default function UsuariosScreen() {
             <FlatList
                 data={usuarios}
                 keyExtractor={item => item.id}
+                numColumns={numColunas}
+                key={numColunas}
+                columnWrapperStyle={numColunas > 1 ? {
+                    gap: 12,
+                    paddingHorizontal: 16,
+                    alignItems: "stretch",  // ← força mesma altura
+                } : undefined}
                 refreshControl={
                     <RefreshControl
                         refreshing={refresh}
@@ -312,7 +320,7 @@ const styles = StyleSheet.create({
     novoBtn:        { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
     novoBtnText:    { color: "#fff", fontWeight: "600", fontSize: 14 },
     empty:          { textAlign: "center", color: colors.muted, marginTop: 40, fontSize: 14 },
-    card:           { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: 16, marginTop: 12, elevation: 2 },
+    card:           { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: Platform.OS === "web" ? 0 : 16, marginTop: 12, elevation: 2, flex: 1, minHeight: 160, justifyContent: "space-between" },
     inativo:        { opacity: 0.5 },
     cardTop:        { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
     avatar:         { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryLight, justifyContent: "center", alignItems: "center" },

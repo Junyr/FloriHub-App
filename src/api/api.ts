@@ -1,6 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
-const BASE_URL = "http://10.0.2.2:8080";
+const BASE_URL = Platform.OS === "web"
+    ? "http://localhost:8080"      // navegador
+    : "http://10.0.2.2:8080";
+
 const TOKEN_KEY = "florihub_token";
 
 export const getToken = () => AsyncStorage.getItem(TOKEN_KEY);

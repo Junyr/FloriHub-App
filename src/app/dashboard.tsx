@@ -140,12 +140,23 @@ export default function DashboardScreen() {
 
                 <TouchableOpacity
                     style={styles.atalhoBtn}
-                    onPress={() => router.push("/usuarios")}
+                    onPress={() => router.push("/relatorio")}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.atalhoEmoji}>🌱</Text>
-                    <Text style={styles.atalhoText}>Usuários</Text>
+                    <Text style={styles.atalhoEmoji}>📊</Text>
+                    <Text style={styles.atalhoText}>Relatório</Text>
                 </TouchableOpacity>
+
+                {usuarioLogado?.role === "ADMIN" && (
+                    <TouchableOpacity
+                        style={styles.atalhoBtn}
+                        onPress={() => router.push("/usuarios")}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.atalhoEmoji}>🌱</Text>
+                        <Text style={styles.atalhoText}>Usuários</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             {/* Vendas recentes */}
@@ -216,9 +227,9 @@ const styles = StyleSheet.create({
     estoqueName: { fontSize: 13, color: colors.text, flex: 1 },
     estoqueQtd:  { fontSize: 13, fontWeight: "600" },
     atalhos:    { flexDirection: "row", padding: 16, gap: 12, marginBottom: 8 },
-    atalhoBtn:  { flex: 1, backgroundColor: "#fff", borderRadius: 12, padding: 16, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-    atalhoEmoji:{ fontSize: 28, marginBottom: 6 },
-    atalhoText: { fontSize: 13, fontWeight: "600", color: colors.primaryDark },
+    atalhoBtn:  { flex: 1, backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+    atalhoEmoji:{ fontSize: 24, marginBottom: 4 },
+    atalhoText: { fontSize: 12, fontWeight: "600", color: colors.primaryDark, textAlign: "center" },
     headerRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     logoutBtn:  { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
     logoutText: { color: "#fff", fontSize: 13, fontWeight: "600" },

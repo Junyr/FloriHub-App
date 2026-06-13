@@ -195,8 +195,13 @@ export default function VendasScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
-                    <Text style={styles.voltar}>← Voltar</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    activeOpacity={0.8}
+                    style={styles.voltarBtn}
+                >
+                    <Text style={styles.voltarSeta}>‹</Text>
+                    <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
                 <View style={styles.headerRow}>
                     <View>
@@ -548,6 +553,9 @@ const styles = StyleSheet.create({
     buscaDatas:  { flexDirection: "row", gap: 8 },
     limparBtn:   { alignItems: "center", paddingVertical: 6 },
     limparText:  { fontSize: 12, color: colors.rose, fontWeight: "600" },
+    voltarBtn:   { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+    voltarSeta:  { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
+    voltarTexto: { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
     // Modal
     modalOverlay:     { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:         { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },

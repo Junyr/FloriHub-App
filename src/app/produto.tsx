@@ -117,10 +117,14 @@ export default function ProdutosScreen() {
     return (
         <View style={styles.container}>
             {/* Header */}
-            {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
-                    <Text style={styles.voltar}>← Voltar</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    activeOpacity={0.8}
+                    style={styles.voltarBtn}
+                >
+                    <Text style={styles.voltarSeta}>‹</Text>
+                    <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>🌸 Produtos</Text>
                 <Text style={styles.headerSub}>{filtrados.length} produtos</Text>
@@ -330,6 +334,9 @@ const styles = StyleSheet.create({
     editarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
     desativarBtn:  { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
     desativarText: { fontSize: 13, color: colors.rose, fontWeight: "600" },
+    voltarBtn:   { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+    voltarSeta:  { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
+    voltarTexto: { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
     // Modal
     modalOverlay:  { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:      { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },
@@ -347,5 +354,4 @@ const styles = StyleSheet.create({
     cancelarText:  { fontSize: 14, color: colors.muted, fontWeight: "600" },
     salvarBtn:     { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: "center" },
     salvarText:    { fontSize: 14, color: "#fff", fontWeight: "600" },
-    voltar: { color: colors.primaryLight, fontSize: 14, marginBottom: 8 },
 });

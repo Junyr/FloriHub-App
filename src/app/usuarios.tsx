@@ -44,8 +44,13 @@ export default function UsuariosScreen() {
                 <Text style={styles.restritoEmoji}>🔒</Text>
                 <Text style={styles.restritoTitulo}>Acesso Restrito</Text>
                 <Text style={styles.restritoSub}>Esta área é exclusiva para administradores.</Text>
-                <TouchableOpacity style={styles.voltarBtn} onPress={() => router.back()}>
-                    <Text style={styles.voltarBtnText}>← Voltar</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    activeOpacity={0.8}
+                    style={styles.voltarBtn}
+                >
+                    <Text style={styles.voltarSeta}>‹</Text>
+                    <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -119,8 +124,13 @@ export default function UsuariosScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
-                    <Text style={styles.voltar}>← Voltar</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    activeOpacity={0.8}
+                    style={styles.voltarBtn}
+                >
+                    <Text style={styles.voltarSeta}>‹</Text>
+                    <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
                 <View style={styles.headerRow}>
                     <View>
@@ -323,8 +333,9 @@ const styles = StyleSheet.create({
     restritoEmoji:  { fontSize: 48, marginBottom: 12 },
     restritoTitulo: { fontSize: 20, fontWeight: "700", color: colors.primaryDark, marginBottom: 8 },
     restritoSub:    { fontSize: 14, color: colors.muted, textAlign: "center", marginBottom: 24 },
-    voltarBtn:      { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 },
-    voltarBtnText:  { color: "#fff", fontWeight: "600" },
+    voltarBtn:   { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+    voltarSeta:  { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
+    voltarTexto: { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
     // Modal
     modalOverlay:   { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:       { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },

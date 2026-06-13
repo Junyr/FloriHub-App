@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const BASE_URL = "http://10.0.2.2:8080";
 const TOKEN_KEY = "florihub_token";
 
-const getToken = () => AsyncStorage.getItem(TOKEN_KEY);
+export const getToken = () => AsyncStorage.getItem(TOKEN_KEY);
 const setToken = (t: string) => AsyncStorage.setItem(TOKEN_KEY, t);
 
 async function request(method: string, path: string, body?: object) {
@@ -72,3 +72,31 @@ export const getUsuarios = () => request("GET", "/usuarios");
 export const createUsuario = (dados: object) => request("POST", "/usuarios", dados);
 export const updateUsuario = (id: string, dados: object) => request("PUT", `/usuarios/${id}`, dados);
 export const deleteUsuario = (id: string) => request("DELETE", `/usuarios/${id}`);
+
+export const getRelatorio = (params: {
+    inicio?: string;
+    fim?: string;
+    status?: string;
+}) => {
+    const query = new URLSearchParams();
+    if (params.inicio) query.append("inicio", params.inicio);
+    if (params.fim)    query.append("fim",    params.fim);
+    if (params.status && params.status !== "Todos") query.append("status", params.status);
+
+    const qs = query.toString();
+    return request("GET", `/relatorios/vendas${qs ? "?" + qs : ""}`);
+};
+
+export const getRelatorioPdfUrl = (params: {
+    inicio?: string;
+    fim?: string;
+    status?: string;
+}) => {
+    const query = new URLSearchParams();
+    if (params.inicio) query.append("inicio", params.inicio);
+    if (params.fim)    query.append("fim",    params.fim);
+    if (params.status) query.append("status", params.status);
+
+    const qs = query.toString();
+    return `${BASE_URL}/relatorios/vendas.pdf${qs ? "?" + qs : ""}`;
+};

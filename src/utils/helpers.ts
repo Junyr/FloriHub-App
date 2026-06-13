@@ -1,3 +1,27 @@
+export interface TopProduto {
+    nomeProduto:      string;
+    quantidadeVendida: number;
+    valorTotal:       number;
+}
+
+export interface VendaResumo {
+    vendaId:    string;
+    dataVenda:  string;
+    cliente:    string;
+    vendedor:   string;
+    status:     string;
+    valorTotal: number;
+}
+
+export interface Relatorio {
+    geradoEm:    string;
+    totalVendas: number;
+    valorTotal:  number;
+    ticketMedio: number;
+    vendas:      VendaResumo[];
+    topProdutos: TopProduto[];
+}
+
 export interface Usuario {
     id:        string;
     nome:      string;

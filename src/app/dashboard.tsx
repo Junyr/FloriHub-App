@@ -1,39 +1,42 @@
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+    ActivityIndicator, Alert, RefreshControl, ScrollView,
+    StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {colors} from "../styles/global";
-import {getProdutos, getUsuarios, getVendas, logout} from "../api/api";
-import {brl, nomeUsuario, Produto, STATUS_CORES, Usuario, Venda} from "../utils/helpers";
-import {router} from "expo-router";
+import { router } from "expo-router";
+import { colors } from "@/styles/global";
+import { getProdutos, getVendas, logout } from "@/api/api";
+import { brl } from "@/utils/helpers";
+import { STATUS_CORES, Venda } from "@/utils/types/Venda";
+import { Produto } from "@/utils/types/Produto";
+import { Usuario } from "@/utils/types/Usuario";
+
+const METRICAS = (receita: number, finalizadas: Venda[], ticket: number, abertas: number, semEstoque: number) => [
+    { label: "Receita Total",  value: brl(receita), sub: `${finalizadas.length} finalizadas`, accent: colors.primary     },
+    { label: "Ticket Médio",   value: brl(ticket),  sub: "por venda",                        accent: "#B8922A"          },
+    { label: "Vendas Abertas", value: abertas,      sub: "em aberto",                        accent: colors.rose        },
+    { label: "Sem Estoque",    value: semEstoque,   sub: "sem reposição",                    accent: colors.primaryDark },
+];
+
+const ATALHOS: { emoji: string; label: string; rota: "/produtos" | "/vendas" | "/relatorios" }[] = [
+    { emoji: "🌸", label: "Produtos",  rota: "/produtos"   },
+    { emoji: "🌺", label: "Vendas",    rota: "/vendas"     },
+    { emoji: "📊", label: "Relatório", rota: "/relatorios" },
+];
 
 export default function DashboardScreen() {
     const [vendas,   setVendas]   = useState<Venda[]>([]);
     const [produtos, setProdutos] = useState<Produto[]>([]);
-    const [usuarios,  setUsuarios]  = useState<Usuario[]>([]);
     const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
     const [load,     setLoad]     = useState(true);
     const [refresh,  setRefresh]  = useState(false);
 
     const carregar = async () => {
         try {
-            const isAdmin = usuarioLogado?.role === "ADMIN";
-            const requests = isAdmin
-                ? [getVendas(), getProdutos(), getUsuarios()]
-                : [getVendas(), getProdutos()];
-
-            const results = await Promise.all(requests);
-            setVendas(results[0]);
-            setProdutos(results[1]);
-            if (isAdmin) setUsuarios(results[2]);
+            const [v, p] = await Promise.all([getVendas(), getProdutos()]);
+            setVendas(v);
+            setProdutos(p);
         } finally {
             setLoad(false);
             setRefresh(false);
@@ -60,6 +63,15 @@ export default function DashboardScreen() {
     const semEstoque  = produtos.filter(p => p.ativo && p.quantidadeEstoque === 0).length;
     const criticos    = produtos.filter(p => p.ativo && p.quantidadeEstoque <= 5);
 
+    const confirmarLogout = () =>
+        Alert.alert("Sair", "Deseja encerrar a sessão?", [
+            { text: "Cancelar", style: "cancel" },
+            { text: "Sair", style: "destructive", onPress: async () => {
+                    await logout();
+                    router.replace("/login");
+                }},
+        ]);
+
     return (
         <ScrollView
             style={styles.container}
@@ -80,23 +92,7 @@ export default function DashboardScreen() {
                             Olá, {usuarioLogado?.nome?.split(" ")[0] || "..."} 👋
                         </Text>
                     </View>
-                    <TouchableOpacity
-                        style={styles.logoutBtn}
-                        activeOpacity={0.8}
-                        onPress={() =>
-                            Alert.alert("Sair", "Deseja encerrar a sessão?", [
-                                { text: "Cancelar", style: "cancel" },
-                                {
-                                    text: "Sair",
-                                    style: "destructive",
-                                    onPress: async () => {
-                                        await logout();
-                                        router.replace("/login");
-                                    },
-                                },
-                            ])
-                        }
-                    >
+                    <TouchableOpacity style={styles.logoutBtn} onPress={confirmarLogout} activeOpacity={0.8}>
                         <Text style={styles.logoutText}>Sair</Text>
                     </TouchableOpacity>
                 </View>
@@ -104,12 +100,7 @@ export default function DashboardScreen() {
 
             {/* Métricas */}
             <View style={styles.grid}>
-                {[
-                    { label: "Receita Total",       value: brl(receita), sub: `${finalizadas.length} finalizadas`, accent: colors.primary     },
-                    { label: "Ticket Médio",        value: brl(ticket),  sub: "por venda",                        accent: "#B8922A"          },
-                    { label: "Vendas Abertas",      value: abertas,      sub: "em aberto",                        accent: colors.rose        },
-                    { label: "Sem Estoque",         value: semEstoque,   sub: "sem reposição",                    accent: colors.primaryDark },
-                ].map((m, i) => (
+                {METRICAS(receita, finalizadas, ticket, abertas, semEstoque).map((m, i) => (
                     <View key={i} style={[styles.metricCard, { borderTopColor: m.accent }]}>
                         <Text style={styles.metricLabel}>{m.label}</Text>
                         <Text style={styles.metricValue}>{String(m.value)}</Text>
@@ -120,41 +111,24 @@ export default function DashboardScreen() {
 
             {/* Atalhos de navegação */}
             <View style={styles.atalhos}>
-                <TouchableOpacity
-                    style={styles.atalhoBtn}
-                    onPress={() => router.push("/produto")}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.atalhoEmoji}>🌸</Text>
-                    <Text style={styles.atalhoText}>Produtos</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.atalhoBtn}
-                    onPress={() => router.push("/vendas")}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.atalhoEmoji}>🌺</Text>
-                    <Text style={styles.atalhoText}>Vendas</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.atalhoBtn}
-                    onPress={() => router.push("/relatorio")}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.atalhoEmoji}>📊</Text>
-                    <Text style={styles.atalhoText}>Relatório</Text>
-                </TouchableOpacity>
-
-                {usuarioLogado?.role === "ADMIN" && (
+                {ATALHOS.map((a) => (
                     <TouchableOpacity
+                        key={a.rota}
                         style={styles.atalhoBtn}
-                        onPress={() => router.push("/usuarios")}
+                        onPress={() => router.push(a.rota)}
                         activeOpacity={0.8}
                     >
+                        <Text style={styles.atalhoEmoji}>{a.emoji}</Text>
+                        <Text style={styles.atalhoText} numberOfLines={1} adjustsFontSizeToFit>
+                            {a.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+
+                {usuarioLogado?.role === "ADMIN" && (
+                    <TouchableOpacity style={styles.atalhoBtn} onPress={() => router.push("/usuarios")} activeOpacity={0.8}>
                         <Text style={styles.atalhoEmoji}>👤</Text>
-                        <Text style={styles.atalhoText}>Usuários</Text>
+                        <Text style={styles.atalhoText} numberOfLines={1} adjustsFontSizeToFit>Usuários</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -167,9 +141,7 @@ export default function DashboardScreen() {
                     return (
                         <View key={v.id} style={styles.vendaRow}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.vendaNome}>
-                                    {v.nomeCliente || "Consumidor Final"}
-                                </Text>
+                                <Text style={styles.vendaNome}> {v.nomeCliente || "Consumidor Final"} </Text>
                                 <Text style={styles.vendaData}>
                                     Vendedor: {v.nomeVendedor} • {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                 </Text>
@@ -205,32 +177,45 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+    // Layout base
     container:   { flex: 1, backgroundColor: colors.background },
     center:      { flex: 1, justifyContent: "center", alignItems: "center" },
+
+    // Header
     header:      { backgroundColor: colors.primaryDark, padding: 24, paddingTop: 56 },
+    headerRow:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
     headerSub:   { fontSize: 14, color: colors.primaryLight },
+    logoutBtn:   { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+    logoutText:  { color: "#fff", fontSize: 13, fontWeight: "600" },
+
+    // Métricas
     grid:        { flexDirection: "row", flexWrap: "wrap", padding: 16, gap: 12 },
     metricCard:  { backgroundColor: "#fff", borderRadius: 12, padding: 16, borderTopWidth: 4, flex: 1, minWidth: "45%" },
     metricLabel: { fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", color: colors.muted, marginBottom: 6 },
     metricValue: { fontSize: 22, fontWeight: "700", color: colors.primaryDark, marginBottom: 2 },
     metricSub:   { fontSize: 11, color: colors.muted },
+
+    // Atalhos de navegação
+    atalhos:     { flexDirection: "row", padding: 16, gap: 12, marginBottom: 8 },
+    atalhoBtn:   { flex: 1, backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+    atalhoEmoji: { fontSize: 24, marginBottom: 4 },
+    atalhoText:  { fontSize: 12, fontWeight: "600", color: colors.primaryDark, textAlign: "center" },
+
+    // Seções (títulos)
     section:     { fontSize: 16, fontWeight: "600", color: colors.primaryDark, paddingHorizontal: 16, marginTop: 16, marginBottom: 8 },
     empty:       { color: colors.muted, fontSize: 13, paddingHorizontal: 16, marginBottom: 8 },
+
+    // Vendas recentes
     vendaRow:    { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: "#fff" },
     vendaNome:   { fontSize: 13, fontWeight: "600", color: colors.text },
     vendaData:   { fontSize: 11, color: colors.muted, marginTop: 2 },
     vendaValor:  { fontSize: 14, fontWeight: "600", color: colors.primaryDark },
     badge:       { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, marginTop: 4 },
     badgeText:   { fontSize: 10, fontWeight: "600" },
+
+    // Estoque crítico
     estoqueRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: "#fff" },
     estoqueName: { fontSize: 13, color: colors.text, flex: 1 },
     estoqueQtd:  { fontSize: 13, fontWeight: "600" },
-    atalhos:    { flexDirection: "row", padding: 16, gap: 12, marginBottom: 8 },
-    atalhoBtn:  { flex: 1, backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-    atalhoEmoji:{ fontSize: 24, marginBottom: 4 },
-    atalhoText: { fontSize: 12, fontWeight: "600", color: colors.primaryDark, textAlign: "center" },
-    headerRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    logoutBtn:  { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
-    logoutText: { color: "#fff", fontSize: 13, fontWeight: "600" },
 });

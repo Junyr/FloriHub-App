@@ -4,9 +4,10 @@ import {
     RefreshControl, TouchableOpacity, Alert, TextInput,
     Modal, ScrollView, KeyboardAvoidingView, Platform,
 } from "react-native";
-import { colors } from "../styles/global";
-import { getProdutos, createProduto, updateProduto, deleteProduto } from "../api/api";
-import {brl, CAT_CORES, CATEGORIAS, FORM_VAZIO, FormProduto, handleVoltar, Produto} from "@/utils/helpers";
+import { colors } from "@/styles/global";
+import { getProdutos, createProduto, updateProduto, deleteProduto } from "@/api/api";
+import {brl, handleVoltar} from "@/utils/helpers";
+import {CATEGORIAS, CATEGORIAS_CORES, FORM_VAZIO, FormProduto, Produto} from "@/utils/types/Produto";
 
 export default function ProdutosScreen() {
     const [produtos,   setProdutos]   = useState<Produto[]>([]);
@@ -166,7 +167,7 @@ export default function ProdutosScreen() {
                 }
                 contentContainerStyle={{ paddingBottom: 32 }}
                 renderItem={({ item: p }) => {
-                    const cat      = CAT_CORES[p.categoria] ?? { bg: "#eee", text: "#666" };
+                    const cat      = CATEGORIAS_CORES[p.categoria] ?? { bg: "#eee", text: "#666" };
                     const esgotado = p.quantidadeEstoque === 0;
                     const critico  = p.quantidadeEstoque <= 5 && p.quantidadeEstoque > 0;
 

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors } from "../styles/global";
+import { colors } from "@/styles/global";
 
 export default function Index() {
   useEffect(() => {

@@ -14,11 +14,6 @@ async function request(method: string, path: string, body?: object) {
     try {
         const token = await getToken();
 
-        // ← adicione esse log
-        console.log("REQUEST:", method, BASE_URL + path);
-        console.log("BODY:", JSON.stringify(body));
-        console.log("TOKEN:", token);
-
         const response = await fetch(BASE_URL + path, {
             method,
             headers: {
@@ -28,13 +23,9 @@ async function request(method: string, path: string, body?: object) {
             ...(body && { body: JSON.stringify(body) }),
         });
 
-        // ← adicione esse log
-        console.log("RESPONSE STATUS:", response.status);
-
         if (!response.ok) {
             const erro = await response.json().catch(() => ({}));
             console.log("RESPONSE ERROR:", erro);
-            throw new Error(erro.message || `Erro ${response.status}`);
         }
 
         if (response.status === 204) return null;

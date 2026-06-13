@@ -14,28 +14,20 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import {router} from "expo-router";
-import {colors} from "../styles/global";
-import {createVenda, getProdutos, getUsuarios, getVendas, updateVendaStatus} from "../api/api";
+import {colors} from "@/styles/global";
+import {createVenda, getProdutos, getVendas, updateVendaStatus} from "@/api/api";
 import {
     brl,
-    FILTROS, handleVoltar,
-    ItemForm,
+    handleVoltar,
     mascaraData,
-    nomeProduto,
-    nomeUsuario, parseData,
-    Produto,
-    STATUS_CORES,
-    Usuario,
-    Venda
+    parseData,
 } from "@/utils/helpers";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {FILTROS, ItemForm, STATUS_CORES, Venda} from "@/utils/types/Venda";
+import {Produto} from "@/utils/types/Produto";
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
     const [produtos,  setProdutos]  = useState<Produto[]>([]);
-    const [usuarios, setUsuarios] = useState([]);
-    const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
     const [busca,      setBusca]      = useState("");
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim,    setDataFim]    = useState("");
@@ -56,28 +48,17 @@ export default function VendasScreen() {
 
     const carregar = async () => {
         try {
-            const isAdmin = usuarioLogado?.role === "ADMIN";
-            const requests = isAdmin
-                ? [getVendas(), getProdutos(), getUsuarios()]
-                : [getVendas(), getProdutos()];
-
-            const results = await Promise.all(requests);
-            setVendas(results[0]);
-            setProdutos(results[1]);
-            if (isAdmin) setUsuarios(results[2]);
+            const [v, p] = await Promise.all([getVendas(), getProdutos()]);
+            setVendas(v);
+            setProdutos(p);
+            if (p.length > 0) setProdSel(p[0]);
         } finally {
             setLoad(false);
             setRefresh(false);
         }
     };
 
-    useEffect(() => {
-        AsyncStorage.getItem("florihub_usuario").then((u) => {
-            if (u) setUsuarioLogado(JSON.parse(u)); // ← estado separado
-            console.log("LOGIN RESPONSE:", JSON.stringify(u));
-        });
-        carregar();
-    }, []);
+    useEffect(() => { carregar(); }, []);
 
     const filtradas = vendas
         .filter(v => filtro === "Todos" || v.status === filtro)
@@ -95,9 +76,8 @@ export default function VendasScreen() {
             const fim    = dataFim    ? parseData(dataFim, true) : null;
 
             if (inicio && data < inicio) return false;
-            if (fim    && data > fim)    return false;
+            return !(fim && data > fim);
 
-            return true;
         })
 
     const totalFin = vendas
@@ -341,7 +321,7 @@ export default function VendasScreen() {
                                     {(v.itens || []).map((it, j) => (
                                         <View key={j} style={styles.itemRow}>
                                             <Text style={styles.itemNome}>
-                                                {nomeProduto(it.produtoId, produtos)} × {it.quantidade}
+                                                {it.nomeProduto} × {it.quantidade}
                                             </Text>
                                             <Text style={styles.itemValor}>{brl(it.subTotal)}</Text>
                                         </View>
@@ -522,13 +502,7 @@ const styles = StyleSheet.create({
     headerTitle:      { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
     headerSub:        { fontSize: 13, color: colors.primaryLight },
     novoBtn:          { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
-    novoBtnText:      {
-        color: "#fff",
-        fontSize: 14,
-        lineHeight: 22,      // ← força altura da linha
-        textAlign: "center", // ← centraliza horizontalmente
-        includeFontPadding: false, // ← remove padding extra do Android
-    },
+    novoBtnText:      { color: "#fff", fontSize: 14, lineHeight: 22, textAlign: "center", includeFontPadding: false },
     filtrosContainer: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border, height: 52 },
     filtros:          { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, gap: 8, alignItems: "center" },
     filtroBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.background },
@@ -553,23 +527,17 @@ const styles = StyleSheet.create({
     finalizarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
     cancelarBtn:      { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
     cancelarText:     { fontSize: 13, color: colors.rose, fontWeight: "600" },
-    buscaBtn:      { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, justifyContent: "center", alignItems: "center", width: 40, height: 40, paddingTop: Platform.OS === "web" ? 0 : 2 },
-    buscaBtnAtivo: { backgroundColor: "rgba(255,255,255,0.35)" },
-    buscaBtnText: {
-        color: "#fff",
-        fontSize: 23,
-        lineHeight: 22,      // ← força altura da linha
-        textAlign: "center", // ← centraliza horizontalmente
-        includeFontPadding: false, // ← remove padding extra do Android
-    },
-    buscaPanel:  { backgroundColor: "#fff", padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
-    buscaInput:  { backgroundColor: colors.background, borderRadius: 8, padding: 10, fontSize: 13, color: colors.text },
-    buscaDatas:  { flexDirection: "row", gap: 8 },
-    limparBtn:   { alignItems: "center", paddingVertical: 6 },
-    limparText:  { fontSize: 12, color: colors.rose, fontWeight: "600" },
-    voltarBtn:   { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
-    voltarSeta:  { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
-    voltarTexto: { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
+    buscaBtn:         { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, justifyContent: "center", alignItems: "center", width: 40, height: 40, paddingTop: Platform.OS === "web" ? 0 : 2 },
+    buscaBtnAtivo:    { backgroundColor: "rgba(255,255,255,0.35)" },
+    buscaBtnText:     { color: "#fff", fontSize: 23, lineHeight: 22, textAlign: "center", includeFontPadding: false },
+    buscaPanel:       { backgroundColor: "#fff", padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
+    buscaInput:       { backgroundColor: colors.background, borderRadius: 8, padding: 10, fontSize: 13, color: colors.text },
+    buscaDatas:       { flexDirection: "row", gap: 8 },
+    limparBtn:        { alignItems: "center", paddingVertical: 6 },
+    limparText:       { fontSize: 12, color: colors.rose, fontWeight: "600" },
+    voltarBtn:        { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+    voltarSeta:       { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
+    voltarTexto:      { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
     // Modal
     modalOverlay:     { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:         { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },

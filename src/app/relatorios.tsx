@@ -1,24 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
     View, Text, ScrollView, StyleSheet,
     ActivityIndicator, TouchableOpacity, Alert,
 } from "react-native";
-import { router } from "expo-router";
-import { colors } from "../styles/global";
-import { getRelatorio, getRelatorioPdfUrl, getToken } from "../api/api";
+import { colors } from "@/styles/global";
+import { getRelatorio, getRelatorioPdfUrl, getToken } from "@/api/api";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing   from "expo-sharing";
-import * as WebBrowser from "expo-web-browser";
 
-import {brl, parseData, mascaraData, Relatorio, handleVoltar} from "../utils/helpers";
+import {brl, handleVoltar} from "@/utils/helpers";
 import { TextInput } from "react-native";
-import { FILTROS } from "../utils/helpers";
-
-const STATUS_CORES: Record<string, { bg: string; text: string }> = {
-    FINALIZADA: { bg: "#d4edd9", text: "#1a5c36" },
-    ABERTA:     { bg: "#fef6df", text: "#B8922A" },
-    CANCELADA:  { bg: "#fce4df", text: "#8a3a2a" },
-};
+import { Relatorio } from "@/utils/types/Relatorio";
+import { STATUS_CORES } from "@/utils/types/Venda";
 
 export default function RelatorioScreen() {
     const [relatorio, setRelatorio] = useState<Relatorio | null>(null);

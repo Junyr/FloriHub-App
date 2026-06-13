@@ -6,9 +6,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors } from "../styles/global";
-import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "../api/api";
-import {FORM_VAZIO_USUARIO, FormUsuario, handleVoltar, ROLE_CORES, Usuario} from "@/utils/helpers";
+import { colors } from "@/styles/global";
+import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "@/api/api";
+import {handleVoltar} from "@/utils/helpers";
+import {FORM_VAZIO, FormUsuario, ROLE_CORES, Usuario} from "@/utils/types/Usuario";
 
 export default function UsuariosScreen() {
     const [usuarios,  setUsuarios]  = useState<Usuario[]>([]);
@@ -16,7 +17,7 @@ export default function UsuariosScreen() {
     const [refresh,   setRefresh]   = useState(false);
     const [modalVis,  setModalVis]  = useState(false);
     const [editando,  setEditando]  = useState<Usuario | null>(null);
-    const [form,      setForm]      = useState<FormUsuario>(FORM_VAZIO_USUARIO);
+    const [form,      setForm]      = useState<FormUsuario>(FORM_VAZIO);
     const [salvando,  setSalvando]  = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<{ role: string } | null>(null);
     const numColunas = Platform.OS === "web" ? 3 : 1;
@@ -59,7 +60,7 @@ export default function UsuariosScreen() {
 
     const abrirCriar = () => {
         setEditando(null);
-        setForm(FORM_VAZIO_USUARIO);
+        setForm(FORM_VAZIO);
         setModalVis(true);
     };
 
@@ -153,7 +154,7 @@ export default function UsuariosScreen() {
                 columnWrapperStyle={numColunas > 1 ? {
                     gap: 12,
                     paddingHorizontal: 16,
-                    alignItems: "stretch",  // ← força mesma altura
+                    alignItems: "stretch",
                 } : undefined}
                 refreshControl={
                     <RefreshControl

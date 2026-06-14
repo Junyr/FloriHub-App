@@ -1,46 +1,17 @@
 import { useEffect, useState } from "react";
 import {
     View, Text, FlatList, StyleSheet, ActivityIndicator,
-    RefreshControl, TouchableOpacity, Alert, TextInput,
+    RefreshControl, TouchableOpacity, TextInput,
     Modal, ScrollView, KeyboardAvoidingView, Platform,
 } from "react-native";
-import { colors } from "../styles/global";
-import { getProdutos, createProduto, updateProduto, deleteProduto } from "../api/api";
-// Adicione o import no topo
-import { router } from "expo-router";
+import { colors } from "@/styles/global";
+import { getProdutos, createProduto, updateProduto, deleteProduto } from "@/api/api";
+import {brl, ConfirmState, handleVoltar} from "@/utils/helpers";
+import {CATEGORIAS, CATEGORIAS_CORES, FORM_VAZIO, FormProduto, Produto} from "@/utils/types/Produto";
+import ConfirmModal from "@/components/ConfirmModal";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface Produto {
-    id:                string;
-    nome:              string;
-    descricao:         string;
-    preco:             number;
-    quantidadeEstoque: number;
-    categoria:         string;
-    ativo:             boolean;
-}
-
-interface FormProduto {
-    nome:              string;
-    descricao:         string;
-    preco:             string;
-    quantidadeEstoque: string;
-    categoria:         string;
-}
-
-const CATEGORIAS = ["Rosa", "Buquê", "Arranjo", "Planta"];
-
-const CAT_CORES: Record<string, { bg: string; text: string }> = {
-    Rosa:    { bg: "#F2DDD9", text: "#C4897A" },
-    Buque:   { bg: "#D4EDE0", text: "#2D5A3D" },
-    Planta:  { bg: "#e0f0d4", text: "#3a6b2a" },
-    Arranjo: { bg: "#fef0d0", text: "#B8922A" },
-};
-
-const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",");
-
-const FORM_VAZIO: FormProduto = {
-    nome: "", descricao: "", preco: "", quantidadeEstoque: "", categoria: "Rosa",
-};
+const numColunas = Platform.OS === "web" ? 3 : 1;
 
 export default function ProdutosScreen() {
     const [produtos,   setProdutos]   = useState<Produto[]>([]);
@@ -52,6 +23,9 @@ export default function ProdutosScreen() {
     const [editando,   setEditando]   = useState<Produto | null>(null);
     const [form,       setForm]       = useState<FormProduto>(FORM_VAZIO);
     const [salvando,   setSalvando]   = useState(false);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
+    const insets = useSafeAreaInsets();
 
     const carregar = async () => {
         try {
@@ -76,6 +50,7 @@ export default function ProdutosScreen() {
         );
     }, [busca, produtos]);
 
+    // Handlers do modal
     const abrirCriar = () => {
         setEditando(null);
         setForm(FORM_VAZIO);
@@ -94,9 +69,17 @@ export default function ProdutosScreen() {
         setModalVis(true);
     };
 
+    // CRUD
     const salvar = async () => {
         if (!form.nome || !form.preco || !form.quantidadeEstoque) {
-            Alert.alert("Atenção", "Preencha os campos obrigatórios.");
+            setConfirm({
+                titulo:      "Atenção",
+                mensagem:    "Preencha os campos obrigatórios.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
             return;
         }
         setSalvando(true);
@@ -108,37 +91,36 @@ export default function ProdutosScreen() {
                 quantidadeEstoque: parseInt(form.quantidadeEstoque),
                 categoria:         form.categoria,
             };
-            if (editando) {
-                await updateProduto(editando.id, dados);
-            } else {
-                await createProduto(dados);
-            }
+            if (editando) await updateProduto(editando.id, dados);
+            else await createProduto(dados);
             setModalVis(false);
             carregar();
         } catch (e: any) {
-            Alert.alert("Erro", e.message || "Erro ao salvar produto.");
+            setConfirm({
+                titulo:      "Erro",
+                mensagem:    e.message || "Erro ao salvar produto.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
         } finally {
             setSalvando(false);
         }
     };
 
-    const desativar = (p: Produto) => {
-        Alert.alert(
-            "Confirmar",
-            `Desativar "${p.nome}"?`,
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Desativar",
-                    style: "destructive",
-                    onPress: async () => {
-                        await deleteProduto(p.id);
-                        carregar();
-                    },
-                },
-            ]
-        );
-    };
+    const desativar = (p: Produto) =>
+        setConfirm({
+            titulo:      "Desativar Produto",
+            mensagem:    `Desativar "${p.nome}"? O produto não aparecerá mais nas listagens.`,
+            confirmText: "Desativar",
+            perigoso:    true,
+            onConfirm:   async () => {
+                await deleteProduto(p.id);
+                setConfirm(null);
+                carregar();
+            },
+        });
 
     if (load) return (
         <View style={styles.center}>
@@ -148,17 +130,29 @@ export default function ProdutosScreen() {
 
     return (
         <View style={styles.container}>
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Header */}
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
-                    <Text style={styles.voltar}>← Voltar</Text>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
+                    <Text style={styles.voltarSeta}>‹</Text>
+                    <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>🌸 Produtos</Text>
                 <Text style={styles.headerSub}>{filtrados.length} produtos</Text>
             </View>
 
-            {/* Busca + botão novo */}
+            {/* Toolbar */}
             <View style={styles.toolbar}>
                 <TextInput
                     style={styles.search}
@@ -172,10 +166,13 @@ export default function ProdutosScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Lista */}
+            {/* Lista de produtos */}
             <FlatList
                 data={filtrados}
                 keyExtractor={item => item.id}
+                numColumns={numColunas}
+                key={numColunas}
+                columnWrapperStyle={numColunas > 1 ? { gap: 12, paddingHorizontal: 16, alignItems: "stretch"} : undefined}
                 refreshControl={
                     <RefreshControl
                         refreshing={refresh}
@@ -183,12 +180,10 @@ export default function ProdutosScreen() {
                         tintColor={colors.primary}
                     />
                 }
-                ListEmptyComponent={
-                    <Text style={styles.empty}>Nenhum produto encontrado.</Text>
-                }
+                ListEmptyComponent={ <Text style={styles.empty}>Nenhum produto encontrado.</Text> }
                 contentContainerStyle={{ paddingBottom: 32 }}
                 renderItem={({ item: p }) => {
-                    const cat      = CAT_CORES[p.categoria] ?? { bg: "#eee", text: "#666" };
+                    const cat      = CATEGORIAS_CORES[p.categoria] ?? { bg: "#eee", text: "#666" };
                     const esgotado = p.quantidadeEstoque === 0;
                     const critico  = p.quantidadeEstoque <= 5 && p.quantidadeEstoque > 0;
 
@@ -208,9 +203,9 @@ export default function ProdutosScreen() {
                                 <Text style={styles.preco}>{brl(p.preco)}</Text>
                                 <Text style={[
                                     styles.estoque,
-                                    esgotado ? { color: colors.rose } :
-                                        critico   ? { color: colors.gold } :
-                                            { color: colors.muted },
+                                    esgotado  ? { color: colors.rose } :
+                                    critico   ? { color: colors.gold } :
+                                    { color: colors.muted },
                                 ]}>
                                     {esgotado ? "Esgotado" : `${p.quantidadeEstoque} un.`}
                                 </Text>
@@ -219,18 +214,10 @@ export default function ProdutosScreen() {
                             {/* Ações */}
                             {p.ativo && (
                                 <View style={styles.acoes}>
-                                    <TouchableOpacity
-                                        style={styles.editarBtn}
-                                        onPress={() => abrirEditar(p)}
-                                        activeOpacity={0.8}
-                                    >
+                                    <TouchableOpacity style={styles.editarBtn} onPress={() => abrirEditar(p)} activeOpacity={0.8}>
                                         <Text style={styles.editarText}>Editar</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.desativarBtn}
-                                        onPress={() => desativar(p)}
-                                        activeOpacity={0.8}
-                                    >
+                                    <TouchableOpacity style={styles.desativarBtn} onPress={() => desativar(p)} activeOpacity={0.8}>
                                         <Text style={styles.desativarText}>Desativar</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -336,17 +323,27 @@ export default function ProdutosScreen() {
 }
 
 const styles = StyleSheet.create({
+    // Layout base
     container:     { flex: 1, backgroundColor: colors.background },
     center:        { flex: 1, justifyContent: "center", alignItems: "center" },
+
+    // Header
     header:        { backgroundColor: colors.primaryDark, padding: 24, paddingTop: 56 },
     headerTitle:   { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
     headerSub:     { fontSize: 13, color: colors.primaryLight },
+    voltarBtn:     { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+    voltarSeta:    { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
+    voltarTexto:   { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
+
+    // Toolbar
     toolbar:       { flexDirection: "row", padding: 12, gap: 10, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border },
     search:        { flex: 1, backgroundColor: colors.background, borderRadius: 8, padding: 10, fontSize: 14, color: colors.text },
     novoBtn:       { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 16, justifyContent: "center" },
     novoBtnText:   { color: "#fff", fontWeight: "600", fontSize: 14 },
     empty:         { textAlign: "center", color: colors.muted, marginTop: 40, fontSize: 14 },
-    card:          { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: 16, marginTop: 12, elevation: 2 },
+
+    // Card de produto
+    card:          { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: Platform.OS === "web" ? 0 : 16, marginTop: 12, elevation: 2, flex: 1, minHeight: 160, justifyContent: "space-between" },
     inativo:       { opacity: 0.5 },
     cardTop:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
     badge:         { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
@@ -357,11 +354,14 @@ const styles = StyleSheet.create({
     cardBottom:    { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 8 },
     preco:         { fontSize: 18, fontWeight: "700", color: colors.primaryDark },
     estoque:       { fontSize: 12, fontWeight: "600" },
+
+    // Ações do card
     acoes:         { flexDirection: "row", gap: 8, marginTop: 12, borderTopWidth: 1, borderTopColor: colors.background, paddingTop: 12 },
     editarBtn:     { flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, padding: 8, alignItems: "center" },
     editarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
     desativarBtn:  { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
     desativarText: { fontSize: 13, color: colors.rose, fontWeight: "600" },
+
     // Modal
     modalOverlay:  { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:      { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },
@@ -369,15 +369,18 @@ const styles = StyleSheet.create({
     label:         { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 6, marginTop: 4 },
     input:         { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: 14, color: colors.text, marginBottom: 4 },
     textarea:      { height: 80, textAlignVertical: "top" },
+
+    // Categorias (modal)
     categorias:    { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
     catBtn:        { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
     catBtnAtivo:   { backgroundColor: colors.primary, borderColor: colors.primary },
     catText:       { fontSize: 13, color: colors.muted },
     catTextAtivo:  { color: "#fff", fontWeight: "600" },
+
+    // Ações do modal
     modalAcoes:    { flexDirection: "row", gap: 12, marginTop: 20 },
     cancelarBtn:   { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center" },
     cancelarText:  { fontSize: 14, color: colors.muted, fontWeight: "600" },
     salvarBtn:     { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: "center" },
     salvarText:    { fontSize: 14, color: "#fff", fontWeight: "600" },
-    voltar: { color: colors.primaryLight, fontSize: 14, marginBottom: 8 },
 });

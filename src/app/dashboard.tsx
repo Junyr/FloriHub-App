@@ -1,47 +1,41 @@
 import { useEffect, useState } from "react";
 import {
-    View, Text, ScrollView, StyleSheet,
-    ActivityIndicator, RefreshControl,
-    TouchableOpacity, Alert, // ← adicione esses dois
+    ActivityIndicator, RefreshControl, ScrollView,
+    StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors } from "../styles/global";
-import { getVendas, getProdutos } from "../api/api";
-import { brl } from "../utils/helpers";
 import { router } from "expo-router";
-import { logout } from "../api/api";
+import { colors } from "@/styles/global";
+import { getProdutos, getVendas, logout } from "@/api/api";
+import {brl, ConfirmState} from "@/utils/helpers";
+import { STATUS_CORES, Venda } from "@/utils/types/Venda";
+import { Produto } from "@/utils/types/Produto";
+import { Usuario } from "@/utils/types/Usuario";
+import ConfirmModal from "@/components/ConfirmModal";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface Venda {
-    id:          string;
-    usuarioNome: string;
-    valorTotal:  number;
-    status:      "ABERTA" | "FINALIZADA" | "CANCELADA";
-    dataVenda:   string;
-}
+const METRICAS = (receita: number, finalizadas: Venda[], ticket: number, abertas: number, semEstoque: number) => [
+    { label: "Receita Total",  value: brl(receita), sub: `${finalizadas.length} finalizadas`, accent: colors.primary     },
+    { label: "Ticket Médio",   value: brl(ticket),  sub: "por venda",                        accent: "#B8922A"          },
+    { label: "Vendas Abertas", value: abertas,      sub: "em aberto",                        accent: colors.rose        },
+    { label: "Sem Estoque",    value: semEstoque,   sub: "sem reposição",                    accent: colors.primaryDark },
+];
 
-interface Produto {
-    id:                string;
-    nome:              string;
-    quantidadeEstoque: number;
-    ativo:             boolean;
-}
-
-interface Usuario {
-    nome: string;
-}
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-    FINALIZADA: { bg: "#d4edd9", text: "#1a5c36" },
-    ABERTA:     { bg: "#fef6df", text: "#B8922A" },
-    CANCELADA:  { bg: "#fce4df", text: "#8a3a2a" },
-};
+const ATALHOS: { emoji: string; label: string; rota: "/produtos" | "/vendas" | "/relatorios" }[] = [
+    { emoji: "🌸", label: "Produtos",  rota: "/produtos"   },
+    { emoji: "🌺", label: "Vendas",    rota: "/vendas"     },
+    { emoji: "📊", label: "Relatório", rota: "/relatorios" },
+];
 
 export default function DashboardScreen() {
     const [vendas,   setVendas]   = useState<Venda[]>([]);
     const [produtos, setProdutos] = useState<Produto[]>([]);
-    const [usuario,  setUsuario]  = useState<Usuario | null>(null);
+    const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
     const [load,     setLoad]     = useState(true);
     const [refresh,  setRefresh]  = useState(false);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
+    const insets = useSafeAreaInsets();
 
     const carregar = async () => {
         try {
@@ -56,7 +50,7 @@ export default function DashboardScreen() {
 
     useEffect(() => {
         AsyncStorage.getItem("florihub_usuario").then((u) => {
-            if (u) setUsuario(JSON.parse(u));
+            if (u) setUsuarioLogado(JSON.parse(u));
         });
         carregar();
     }, []);
@@ -74,6 +68,19 @@ export default function DashboardScreen() {
     const semEstoque  = produtos.filter(p => p.ativo && p.quantidadeEstoque === 0).length;
     const criticos    = produtos.filter(p => p.ativo && p.quantidadeEstoque <= 5);
 
+    // Handlers
+    const confirmarLogout = () =>
+        setConfirm({
+            titulo:      "Sair",
+            mensagem:    "Deseja encerrar a sessão?",
+            confirmText: "Sair",
+            perigoso:    true,
+            onConfirm:   async () => {
+                await logout();
+                router.replace("/login");
+            },
+        });
+
     return (
         <ScrollView
             style={styles.container}
@@ -85,45 +92,36 @@ export default function DashboardScreen() {
                 />
             }
         >
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerRow}>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.headerTitle}>🌺 FloriHub</Text>
                         <Text style={styles.headerSub}>
-                            Olá, {usuario?.nome?.split(" ")[0] || "..."} 👋
+                            Olá, {usuarioLogado?.nome?.split(" ")[0] || "..."} 👋
                         </Text>
                     </View>
-                    <TouchableOpacity
-                        style={styles.logoutBtn}
-                        activeOpacity={0.8}
-                        onPress={() =>
-                            Alert.alert("Sair", "Deseja encerrar a sessão?", [
-                                { text: "Cancelar", style: "cancel" },
-                                {
-                                    text: "Sair",
-                                    style: "destructive",
-                                    onPress: async () => {
-                                        await logout();
-                                        router.replace("/login");
-                                    },
-                                },
-                            ])
-                        }
-                    >
-                        <Text style={styles.logoutText}>⏻</Text>
+                    <TouchableOpacity style={styles.logoutBtn} onPress={confirmarLogout} activeOpacity={0.8}>
+                        <Text style={styles.logoutText}>Sair</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             {/* Métricas */}
             <View style={styles.grid}>
-                {[
-                    { label: "Receita Total",       value: brl(receita), sub: `${finalizadas.length} finalizadas`, accent: colors.primary     },
-                    { label: "Ticket Médio",        value: brl(ticket),  sub: "por venda",                        accent: "#B8922A"          },
-                    { label: "Vendas Abertas",      value: abertas,      sub: "em aberto",                        accent: colors.rose        },
-                    { label: "Sem Estoque",         value: semEstoque,   sub: "sem reposição",                    accent: colors.primaryDark },
-                ].map((m, i) => (
+                {METRICAS(receita, finalizadas, ticket, abertas, semEstoque).map((m, i) => (
                     <View key={i} style={[styles.metricCard, { borderTopColor: m.accent }]}>
                         <Text style={styles.metricLabel}>{m.label}</Text>
                         <Text style={styles.metricValue}>{String(m.value)}</Text>
@@ -134,32 +132,26 @@ export default function DashboardScreen() {
 
             {/* Atalhos de navegação */}
             <View style={styles.atalhos}>
-                <TouchableOpacity
-                    style={styles.atalhoBtn}
-                    onPress={() => router.push("/produto")}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.atalhoEmoji}>🌸</Text>
-                    <Text style={styles.atalhoText}>Produtos</Text>
-                </TouchableOpacity>
+                {ATALHOS.map((a) => (
+                    <TouchableOpacity
+                        key={a.rota}
+                        style={styles.atalhoBtn}
+                        onPress={() => router.push(a.rota)}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.atalhoEmoji}>{a.emoji}</Text>
+                        <Text style={styles.atalhoText} numberOfLines={1} adjustsFontSizeToFit>
+                            {a.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
 
-                <TouchableOpacity
-                    style={styles.atalhoBtn}
-                    onPress={() => router.push("/vendas")}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.atalhoEmoji}>🌺</Text>
-                    <Text style={styles.atalhoText}>Vendas</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.atalhoBtn}
-                    onPress={() => {}/*router.push(/*"/usuarios")*/}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.atalhoEmoji}>🌱</Text>
-                    <Text style={styles.atalhoText}>Usuários</Text>
-                </TouchableOpacity>
+                {usuarioLogado?.role === "ADMIN" && (
+                    <TouchableOpacity style={styles.atalhoBtn} onPress={() => router.push("/usuarios")} activeOpacity={0.8}>
+                        <Text style={styles.atalhoEmoji}>👤</Text>
+                        <Text style={styles.atalhoText} numberOfLines={1} adjustsFontSizeToFit>Usuários</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             {/* Vendas recentes */}
@@ -167,19 +159,18 @@ export default function DashboardScreen() {
             {vendas.length === 0
                 ? <Text style={styles.empty}>Nenhuma venda registrada.</Text>
                 : vendas.slice(0, 5).map(v => {
-                    const sc = STATUS_COLORS[v.status] || { bg: "#eee", text: "#666" };
                     return (
                         <View key={v.id} style={styles.vendaRow}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.vendaNome}>{v.usuarioNome || "—"}</Text>
+                                <Text style={styles.vendaNome}>{v.nomeCliente || "Consumidor Final"}</Text>
                                 <Text style={styles.vendaData}>
-                                    {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
+                                    Vendedor: {v.nomeVendedor} • {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                 </Text>
                             </View>
                             <View style={{ alignItems: "flex-end" }}>
                                 <Text style={styles.vendaValor}>{brl(v.valorTotal)}</Text>
-                                <View style={[styles.badge, { backgroundColor: sc.bg }]}>
-                                    <Text style={[styles.badgeText, { color: sc.text }]}>{v.status}</Text>
+                                <View style={[styles.badge, { backgroundColor: STATUS_CORES[v.status].bg }]}>
+                                    <Text style={[styles.badgeText, { color: STATUS_CORES[v.status].text }]}>{v.status}</Text>
                                 </View>
                             </View>
                         </View>
@@ -207,32 +198,45 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+    // Layout base
     container:   { flex: 1, backgroundColor: colors.background },
     center:      { flex: 1, justifyContent: "center", alignItems: "center" },
+
+    // Header
     header:      { backgroundColor: colors.primaryDark, padding: 24, paddingTop: 56 },
+    headerRow:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
     headerSub:   { fontSize: 14, color: colors.primaryLight },
+    logoutBtn:   { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+    logoutText:  { color: "#fff", fontSize: 13, fontWeight: "600" },
+
+    // Métricas
     grid:        { flexDirection: "row", flexWrap: "wrap", padding: 16, gap: 12 },
     metricCard:  { backgroundColor: "#fff", borderRadius: 12, padding: 16, borderTopWidth: 4, flex: 1, minWidth: "45%" },
     metricLabel: { fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", color: colors.muted, marginBottom: 6 },
     metricValue: { fontSize: 22, fontWeight: "700", color: colors.primaryDark, marginBottom: 2 },
     metricSub:   { fontSize: 11, color: colors.muted },
+
+    // Atalhos de navegação
+    atalhos:     { flexDirection: "row", padding: 16, gap: 12, marginBottom: 8 },
+    atalhoBtn:   { flex: 1, backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+    atalhoEmoji: { fontSize: 24, marginBottom: 4 },
+    atalhoText:  { fontSize: 12, fontWeight: "600", color: colors.primaryDark, textAlign: "center" },
+
+    // Seções (títulos)
     section:     { fontSize: 16, fontWeight: "600", color: colors.primaryDark, paddingHorizontal: 16, marginTop: 16, marginBottom: 8 },
     empty:       { color: colors.muted, fontSize: 13, paddingHorizontal: 16, marginBottom: 8 },
+
+    // Vendas recentes
     vendaRow:    { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: "#fff" },
     vendaNome:   { fontSize: 13, fontWeight: "600", color: colors.text },
     vendaData:   { fontSize: 11, color: colors.muted, marginTop: 2 },
     vendaValor:  { fontSize: 14, fontWeight: "600", color: colors.primaryDark },
     badge:       { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, marginTop: 4 },
     badgeText:   { fontSize: 10, fontWeight: "600" },
+
+    // Estoque crítico
     estoqueRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: "#fff" },
     estoqueName: { fontSize: 13, color: colors.text, flex: 1 },
     estoqueQtd:  { fontSize: 13, fontWeight: "600" },
-    atalhos:    { flexDirection: "row", padding: 16, gap: 12, marginBottom: 8 },
-    atalhoBtn:  { flex: 1, backgroundColor: "#fff", borderRadius: 12, padding: 16, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-    atalhoEmoji:{ fontSize: 28, marginBottom: 6 },
-    atalhoText: { fontSize: 13, fontWeight: "600", color: colors.primaryDark },
-    headerRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    logoutBtn:  { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, padding: 10 },
-    logoutText: { color: "#fff", fontSize: 18 },
 });

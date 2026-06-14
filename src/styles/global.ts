@@ -1,5 +1,3 @@
-import { TextStyle } from "react-native";
-
 export const colors = {
     primary:      "#2D5A3D",
     primaryDark:  "#1C3829",

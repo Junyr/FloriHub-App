@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+import {router} from "expo-router";
 
 const BASE_URL = Platform.OS === "web"
     ? "http://localhost:8080"      // navegador
@@ -23,13 +24,22 @@ async function request(method: string, path: string, body?: object) {
             ...(body && { body: JSON.stringify(body) }),
         });
 
-        if (!response.ok) {
-            const erro = await response.json().catch(() => ({}));
-            console.log("RESPONSE ERROR:", erro);
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : null;
+
+        if (response.status === 401 || response.status === 403) {
+            await AsyncStorage.removeItem("florihub_token");
+            await AsyncStorage.removeItem("florihub_usuario");
+            router.replace("/login");
+            throw new Error("Sessão expirada. Faça login novamente.");
         }
 
-        if (response.status === 204) return null;
-        return response.json();
+        if (!response.ok) {
+            throw new Error(data?.message || data?.mensagem || `Erro ${response.status}`);
+        }
+
+        return data;
+
     } catch (e: any) {
         console.error("ERRO:", method, BASE_URL + path, e.message);
         throw e;

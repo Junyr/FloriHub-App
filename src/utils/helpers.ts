@@ -26,6 +26,12 @@ export const parseData = (str: string, fimDoDia = false) => {
     return isNaN(data.getTime()) ? null : data;
 };
 
+export const parseDateToISO = (str: string): string | undefined => {
+    const partes = str.split("/");
+    if (partes.length !== 3 || partes[2].length !== 4) return undefined;
+    return `${partes[2]}-${partes[1]}-${partes[0]}`;
+};
+
 export const brl = (v: number) =>
     v.toLocaleString("pt-BR", {
         style:    "currency",

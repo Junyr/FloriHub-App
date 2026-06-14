@@ -11,6 +11,19 @@ import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "@/api/
 import {handleVoltar} from "@/utils/helpers";
 import {FORM_VAZIO, FormUsuario, ROLE_CORES, Usuario} from "@/utils/types/Usuario";
 
+const numColunas = Platform.OS === "web" ? 3 : 1;
+
+
+const confirmarDesativar = (u: Usuario, onConfirm: () => void) =>
+    Alert.alert(
+        "Confirmar",
+        `Desativar "${u.nome}"? O usuário não poderá mais fazer login.`,
+        [
+            { text: "Cancelar", style: "cancel" },
+            { text: "Desativar", style: "destructive", onPress: onConfirm },
+        ]
+    );
+
 export default function UsuariosScreen() {
     const [usuarios,  setUsuarios]  = useState<Usuario[]>([]);
     const [load,      setLoad]      = useState(true);
@@ -20,7 +33,6 @@ export default function UsuariosScreen() {
     const [form,      setForm]      = useState<FormUsuario>(FORM_VAZIO);
     const [salvando,  setSalvando]  = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<{ role: string } | null>(null);
-    const numColunas = Platform.OS === "web" ? 3 : 1;
 
     const carregar = async () => {
         try {
@@ -46,11 +58,7 @@ export default function UsuariosScreen() {
                 <Text style={styles.restritoEmoji}>🔒</Text>
                 <Text style={styles.restritoTitulo}>Acesso Restrito</Text>
                 <Text style={styles.restritoSub}>Esta área é exclusiva para administradores.</Text>
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    activeOpacity={0.8}
-                    style={styles.voltarBtn}
-                >
+                <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
                     <Text style={styles.voltarSeta}>‹</Text>
                     <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
@@ -58,6 +66,7 @@ export default function UsuariosScreen() {
         );
     }
 
+    // Handlers do modal
     const abrirCriar = () => {
         setEditando(null);
         setForm(FORM_VAZIO);
@@ -70,6 +79,7 @@ export default function UsuariosScreen() {
         setModalVis(true);
     };
 
+    // CRUD
     const salvar = async () => {
         if (!form.nome || !form.email) {
             Alert.alert("Atenção", "Nome e e-mail são obrigatórios.");
@@ -126,17 +136,13 @@ export default function UsuariosScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={handleVoltar}
-                    activeOpacity={0.8}
-                    style={styles.voltarBtn}
-                >
+                <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
                     <Text style={styles.voltarSeta}>‹</Text>
                     <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
                 <View style={styles.headerRow}>
                     <View>
-                        <Text style={styles.headerTitle}>🌱 Usuários</Text>
+                        <Text style={styles.headerTitle}>👤 Usuários</Text>
                         <Text style={styles.headerSub}>{usuarios.length} cadastrados</Text>
                     </View>
                     <TouchableOpacity style={styles.novoBtn} onPress={abrirCriar} activeOpacity={0.8}>
@@ -145,17 +151,13 @@ export default function UsuariosScreen() {
                 </View>
             </View>
 
-            {/* Lista */}
+            {/* Lista de usuários */}
             <FlatList
                 data={usuarios}
                 keyExtractor={item => item.id}
                 numColumns={numColunas}
                 key={numColunas}
-                columnWrapperStyle={numColunas > 1 ? {
-                    gap: 12,
-                    paddingHorizontal: 16,
-                    alignItems: "stretch",
-                } : undefined}
+                columnWrapperStyle={numColunas > 1 ? { gap: 12, paddingHorizontal: 16, alignItems: "stretch",} : undefined}
                 refreshControl={
                     <RefreshControl
                         refreshing={refresh}
@@ -163,9 +165,7 @@ export default function UsuariosScreen() {
                         tintColor={colors.primary}
                     />
                 }
-                ListEmptyComponent={
-                    <Text style={styles.empty}>Nenhum usuário encontrado.</Text>
-                }
+                ListEmptyComponent={ <Text style={styles.empty}>Nenhum usuário encontrado.</Text> }
                 contentContainerStyle={{ paddingBottom: 32 }}
                 renderItem={({ item: u }) => {
                     const rc = ROLE_CORES[u.role] ?? { bg: "#eee", text: "#666" };
@@ -202,18 +202,10 @@ export default function UsuariosScreen() {
                             {/* Ações */}
                             {u.ativo && (
                                 <View style={styles.acoes}>
-                                    <TouchableOpacity
-                                        style={styles.editarBtn}
-                                        onPress={() => abrirEditar(u)}
-                                        activeOpacity={0.8}
-                                    >
+                                    <TouchableOpacity style={styles.editarBtn} onPress={() => abrirEditar(u)} activeOpacity={0.8}>
                                         <Text style={styles.editarText}>Editar</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.desativarBtn}
-                                        onPress={() => desativar(u)}
-                                        activeOpacity={0.8}
-                                    >
+                                    <TouchableOpacity style={styles.desativarBtn} onPress={() => desativar(u)} activeOpacity={0.8}>
                                         <Text style={styles.desativarText}>Desativar</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -276,19 +268,13 @@ export default function UsuariosScreen() {
                                         onPress={() => setForm({ ...form, role: r })}
                                         activeOpacity={0.8}
                                     >
-                                        <Text style={[styles.roleText, form.role === r && styles.roleTextAtivo]}>
-                                            {r}
-                                        </Text>
+                                        <Text style={[styles.roleText, form.role === r && styles.roleTextAtivo]}> {r} </Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
 
                             <View style={styles.modalAcoes}>
-                                <TouchableOpacity
-                                    style={styles.cancelarBtn}
-                                    onPress={() => setModalVis(false)}
-                                    activeOpacity={0.8}
-                                >
+                                <TouchableOpacity style={styles.cancelarBtn} onPress={() => setModalVis(false)} activeOpacity={0.8}>
                                     <Text style={styles.cancelarText}>Cancelar</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
@@ -311,16 +297,29 @@ export default function UsuariosScreen() {
 }
 
 const styles = StyleSheet.create({
+    // Layout base
     container:      { flex: 1, backgroundColor: colors.background },
     center:         { flex: 1, justifyContent: "center", alignItems: "center" },
+
+    // Acesso restrito
+    restrito:       { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background, padding: 32 },
+    restritoEmoji:  { fontSize: 48, marginBottom: 12 },
+    restritoTitulo: { fontSize: 20, fontWeight: "700", color: colors.primaryDark, marginBottom: 8 },
+    restritoSub:    { fontSize: 14, color: colors.muted, textAlign: "center", marginBottom: 24 },
+
+    // Header
     header:         { backgroundColor: colors.primaryDark, padding: 24, paddingTop: 56 },
-    voltar:         { color: colors.primaryLight, fontSize: 14, marginBottom: 8 },
     headerRow:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     headerTitle:    { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
     headerSub:      { fontSize: 13, color: colors.primaryLight },
+    voltarBtn:      { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+    voltarSeta:     { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
+    voltarTexto:    { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
     novoBtn:        { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
     novoBtnText:    { color: "#fff", fontWeight: "600", fontSize: 14 },
     empty:          { textAlign: "center", color: colors.muted, marginTop: 40, fontSize: 14 },
+
+    // Card de usuário
     card:           { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: Platform.OS === "web" ? 0 : 16, marginTop: 12, elevation: 2, flex: 1, minHeight: 160, justifyContent: "space-between" },
     inativo:        { opacity: 0.5 },
     cardTop:        { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
@@ -330,32 +329,34 @@ const styles = StyleSheet.create({
     email:          { fontSize: 12, color: colors.muted, marginTop: 2 },
     badge:          { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
     badgeText:      { fontSize: 11, fontWeight: "600" },
+
+    // Status
     cardMid:        { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
     statusDot:      { width: 8, height: 8, borderRadius: 4 },
     statusText:     { fontSize: 12, fontWeight: "600" },
+
+    // Ações do card
     acoes:          { flexDirection: "row", gap: 8, borderTopWidth: 1, borderTopColor: colors.background, paddingTop: 12 },
     editarBtn:      { flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, padding: 8, alignItems: "center" },
     editarText:     { fontSize: 13, color: colors.primary, fontWeight: "600" },
     desativarBtn:   { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
     desativarText:  { fontSize: 13, color: colors.rose, fontWeight: "600" },
-    restrito:       { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background, padding: 32 },
-    restritoEmoji:  { fontSize: 48, marginBottom: 12 },
-    restritoTitulo: { fontSize: 20, fontWeight: "700", color: colors.primaryDark, marginBottom: 8 },
-    restritoSub:    { fontSize: 14, color: colors.muted, textAlign: "center", marginBottom: 24 },
-    voltarBtn:   { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
-    voltarSeta:  { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
-    voltarTexto: { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
+
     // Modal
     modalOverlay:   { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:       { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },
     modalTitle:     { fontSize: 20, fontWeight: "700", color: colors.primaryDark, marginBottom: 20 },
     label:          { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 6, marginTop: 8 },
     input:          { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: 14, color: colors.text, marginBottom: 4 },
+
+    // Papéis (modal)
     roles:          { flexDirection: "row", gap: 12, marginBottom: 12 },
     roleBtn:        { flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: "center" },
     roleBtnAtivo:   { backgroundColor: colors.primary, borderColor: colors.primary },
     roleText:       { fontSize: 13, color: colors.muted, fontWeight: "600" },
     roleTextAtivo:  { color: "#fff" },
+
+    // Ações do modal
     modalAcoes:     { flexDirection: "row", gap: 12, marginTop: 20 },
     cancelarBtn:    { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center" },
     cancelarText:   { fontSize: 14, color: colors.muted, fontWeight: "600" },

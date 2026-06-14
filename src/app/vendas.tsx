@@ -1,29 +1,36 @@
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+    View, Text, FlatList, StyleSheet, ActivityIndicator,
+    RefreshControl, TouchableOpacity, Alert, Modal,
+    ScrollView, KeyboardAvoidingView, Platform, TextInput,
 } from "react-native";
-import {colors} from "@/styles/global";
-import {createVenda, getProdutos, getVendas, updateVendaStatus} from "@/api/api";
-import {
-    brl,
-    handleVoltar,
-    mascaraData,
-    parseData,
-} from "@/utils/helpers";
-import {FILTROS, ItemForm, STATUS_CORES, Venda} from "@/utils/types/Venda";
-import {Produto} from "@/utils/types/Produto";
+import { colors } from "@/styles/global";
+import { createVenda, getProdutos, getVendas, updateVendaStatus } from "@/api/api";
+import { brl, handleVoltar, mascaraData, parseData } from "@/utils/helpers";
+import { FILTROS, ItemForm, STATUS_CORES, Venda } from "@/utils/types/Venda";
+import { Produto } from "@/utils/types/Produto";
+
+const confirmarCancelar = (v: Venda, onConfirm: () => void) => {
+    if (Platform.OS === "web") {
+        if (window.confirm(`Cancelar a venda de ${brl(v.valorTotal)}?`)) onConfirm();
+        return;
+    }
+    Alert.alert("Cancelar Venda", `Cancelar a venda de ${brl(v.valorTotal)}?`, [
+        { text: "Não", style: "cancel" },
+        { text: "Sim, cancelar", style: "destructive", onPress: onConfirm },
+    ]);
+};
+
+const confirmarFinalizar = (v: Venda, onConfirm: () => void) => {
+    if (Platform.OS === "web") {
+        if (window.confirm(`Finalizar a venda de ${brl(v.valorTotal)}?`)) onConfirm();
+        return;
+    }
+    Alert.alert("Finalizar Venda", `Finalizar a venda de ${brl(v.valorTotal)}?`, [
+        { text: "Não", style: "cancel" },
+        { text: "Finalizar", onPress: onConfirm },
+    ]);
+};
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
@@ -37,7 +44,6 @@ export default function VendasScreen() {
     const [load,      setLoad]      = useState(true);
     const [refresh,   setRefresh]   = useState(false);
 
-    // Modal nova venda
     const [modalVis,  setModalVis]  = useState(false);
     const [itens,     setItens]     = useState<ItemForm[]>([]);
     const [prodSel,   setProdSel]   = useState<Produto | null>(null);
@@ -60,6 +66,7 @@ export default function VendasScreen() {
 
     useEffect(() => { carregar(); }, []);
 
+    // Filtros
     const filtradas = vendas
         .filter(v => filtro === "Todos" || v.status === filtro)
         .filter(v => {
@@ -84,6 +91,7 @@ export default function VendasScreen() {
         .filter(v => v.status === "FINALIZADA")
         .reduce((s, v) => s + v.valorTotal, 0);
 
+    // Handlers de itens de venda
     const addItem = () => {
         if (!prodSel) return;
         const existe = itens.find(i => i.produto.id === prodSel.id);
@@ -103,6 +111,7 @@ export default function VendasScreen() {
 
     const totalVenda = itens.reduce((s, i) => s + i.produto.preco * i.quantidade, 0);
 
+    // CRUD de vendas
     const salvarVenda = async () => {
         if (itens.length === 0) {
             Alert.alert("Atenção", "Adicione ao menos um item.");
@@ -130,40 +139,17 @@ export default function VendasScreen() {
         }
     };
 
-    const cancelarVenda = (v: Venda) => {
-        Alert.alert(
-            "Cancelar Venda",
-            `Cancelar a venda de ${brl(v.valorTotal)}?`,
-            [
-                { text: "Não", style: "cancel" },
-                {
-                    text: "Sim, cancelar",
-                    style: "destructive",
-                    onPress: async () => {
-                        await updateVendaStatus(v.id, "CANCELADA");
-                        carregar();
-                    },
-                },
-            ]
-        );
-    };
+    const cancelarVenda = (v: Venda) =>
+        confirmarCancelar(v, async () => {
+            await updateVendaStatus(v.id, "CANCELADA");
+            carregar();
+        });
 
-    const finalizarVenda = (v: Venda) => {
-        Alert.alert(
-            "Finalizar Venda",
-            `Finalizar a venda de ${brl(v.valorTotal)}?`,
-            [
-                { text: "Não", style: "cancel" },
-                {
-                    text: "Finalizar",
-                    onPress: async () => {
-                        await updateVendaStatus(v.id, "FINALIZADA");
-                        carregar();
-                    },
-                },
-            ]
-        );
-    };
+    const finalizarVenda = (v: Venda) =>
+        confirmarFinalizar(v, async () => {
+            await updateVendaStatus(v.id, "FINALIZADA");
+            carregar();
+        });
 
     if (load) return (
         <View style={styles.center}>
@@ -175,11 +161,7 @@ export default function VendasScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={handleVoltar}
-                    activeOpacity={0.8}
-                    style={styles.voltarBtn}
-                >
+                <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
                     <Text style={styles.voltarSeta}>‹</Text>
                     <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>
@@ -189,18 +171,10 @@ export default function VendasScreen() {
                         <Text style={styles.headerSub}>Finalizadas: {brl(totalFin)}</Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8 }}>
-                        <TouchableOpacity
-                            style={[styles.buscaBtn, buscaVis && styles.buscaBtnAtivo]}
-                            onPress={() => setBuscaVis(!buscaVis)}
-                            activeOpacity={0.8}
-                        >
+                        <TouchableOpacity style={[styles.buscaBtn, buscaVis && styles.buscaBtnAtivo]} onPress={() => setBuscaVis(!buscaVis)} activeOpacity={0.8}>
                             <Text style={styles.buscaBtnText}>⌕</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.novoBtn}
-                            onPress={() => setModalVis(true)}
-                            activeOpacity={0.8}
-                        >
+                        <TouchableOpacity style={styles.novoBtn} onPress={() => setModalVis(true)} activeOpacity={0.8}>
                             <Text style={styles.novoBtnText}>+ Nova</Text>
                         </TouchableOpacity>
                     </View>
@@ -248,13 +222,9 @@ export default function VendasScreen() {
                 </View>
             )}
 
-            {/* Filtros */}
+            {/* Filtros por status */}
             <View style={styles.filtrosContainer}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filtros}
-                >
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtros}>
                     {FILTROS.map(f => (
                         <TouchableOpacity
                             key={f}
@@ -262,15 +232,13 @@ export default function VendasScreen() {
                             onPress={() => setFiltro(f)}
                             activeOpacity={0.8}
                         >
-                            <Text style={[styles.filtroText, filtro === f && styles.filtroTextAtivo]}>
-                                {f}
-                            </Text>
+                            <Text style={[styles.filtroText, filtro === f && styles.filtroTextAtivo]}> {f} </Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
             </View>
 
-            {/* Lista */}
+            {/* Lista de vendas */}
             <FlatList
                 data={filtradas}
                 keyExtractor={item => item.id}
@@ -281,20 +249,14 @@ export default function VendasScreen() {
                         tintColor={colors.primary}
                     />
                 }
-                ListEmptyComponent={
-                    <Text style={styles.empty}>Nenhuma venda encontrada.</Text>
-                }
+                ListEmptyComponent={ <Text style={styles.empty}>Nenhuma venda encontrada.</Text> }
                 contentContainerStyle={{ paddingBottom: 32 }}
                 renderItem={({ item: v }) => {
                     const sc       = STATUS_CORES[v.status] ?? { bg: "#eee", text: "#666" };
                     const aberta   = expandida === v.id;
 
                     return (
-                        <TouchableOpacity
-                            style={styles.card}
-                            onPress={() => setExpandida(aberta ? null : v.id)}
-                            activeOpacity={0.9}
-                        >
+                        <TouchableOpacity style={styles.card} onPress={() => setExpandida(aberta ? null : v.id)} activeOpacity={0.9}>
                             {/* Linha principal */}
                             <View style={styles.cardTop}>
                                 <View style={{ flex: 1 }}>
@@ -308,9 +270,7 @@ export default function VendasScreen() {
                                 <View style={{ alignItems: "flex-end" }}>
                                     <Text style={styles.cardValor}>{brl(v.valorTotal)}</Text>
                                     <View style={[styles.badge, { backgroundColor: sc.bg }]}>
-                                        <Text style={[styles.badgeText, { color: sc.text }]}>
-                                            {v.status}
-                                        </Text>
+                                        <Text style={[styles.badgeText, { color: sc.text }]}> {v.status} </Text>
                                     </View>
                                 </View>
                             </View>
@@ -320,32 +280,23 @@ export default function VendasScreen() {
                                 <View style={styles.itensBox}>
                                     {(v.itens || []).map((it, j) => (
                                         <View key={j} style={styles.itemRow}>
-                                            <Text style={styles.itemNome}>
-                                                {it.nomeProduto} × {it.quantidade}
-                                            </Text>
+                                            <Text style={styles.itemNome}> {it.nomeProduto} × {it.quantidade} </Text>
                                             <Text style={styles.itemValor}>{brl(it.subTotal)}</Text>
                                         </View>
                                     ))}
 
                                     {v.observacao ? (
                                         <Text style={styles.obs}>Obs: {v.observacao}</Text>
-                                    ) : null}
+                                        ) : null
+                                    }
 
                                     {/* Ações */}
                                     {v.status === "ABERTA" && (
                                         <View style={styles.acoes}>
-                                            <TouchableOpacity
-                                                style={styles.finalizarBtn}
-                                                onPress={() => finalizarVenda(v)}
-                                                activeOpacity={0.8}
-                                            >
+                                            <TouchableOpacity style={styles.finalizarBtn} onPress={() => finalizarVenda(v)} activeOpacity={0.8}>
                                                 <Text style={styles.finalizarText}>Finalizar</Text>
                                             </TouchableOpacity>
-                                            <TouchableOpacity
-                                                style={styles.cancelarBtn}
-                                                onPress={() => cancelarVenda(v)}
-                                                activeOpacity={0.8}
-                                            >
+                                            <TouchableOpacity style={styles.cancelarBtn} onPress={() => cancelarVenda(v)} activeOpacity={0.8}>
                                                 <Text style={styles.cancelarText}>Cancelar</Text>
                                             </TouchableOpacity>
                                         </View>
@@ -369,11 +320,7 @@ export default function VendasScreen() {
 
                             {/* Seleção de produto */}
                             <Text style={styles.label}>Produto</Text>
-                            <TouchableOpacity
-                                style={styles.seletor}
-                                onPress={() => setSelVis(true)}
-                                activeOpacity={0.8}
-                            >
+                            <TouchableOpacity style={styles.seletor} onPress={() => setSelVis(true)} activeOpacity={0.8}>
                                 <Text style={styles.seletorText}>
                                     {prodSel ? `${prodSel.nome} — ${brl(prodSel.preco)}` : "Selecionar…"}
                                 </Text>
@@ -383,24 +330,14 @@ export default function VendasScreen() {
                             {/* Quantidade */}
                             <Text style={styles.label}>Quantidade</Text>
                             <View style={styles.qtdRow}>
-                                <TouchableOpacity
-                                    style={styles.qtdBtn}
-                                    onPress={() => setQtd(q => Math.max(1, q - 1))}
-                                >
+                                <TouchableOpacity style={styles.qtdBtn} onPress={() => setQtd(q => Math.max(1, q - 1))}>
                                     <Text style={styles.qtdBtnText}>−</Text>
                                 </TouchableOpacity>
-                                <Text style={styles.qtdVal}>{qtd}</Text>
-                                <TouchableOpacity
-                                    style={styles.qtdBtn}
-                                    onPress={() => setQtd(q => q + 1)}
-                                >
+                                <Text style={styles.qtdVal}> {qtd} </Text>
+                                <TouchableOpacity style={styles.qtdBtn} onPress={() => setQtd(q => q + 1)}>
                                     <Text style={styles.qtdBtnText}>+</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.addBtn}
-                                    onPress={addItem}
-                                    activeOpacity={0.8}
-                                >
+                                <TouchableOpacity style={styles.addBtn} onPress={addItem} activeOpacity={0.8}>
                                     <Text style={styles.addBtnText}>+ Adicionar</Text>
                                 </TouchableOpacity>
                             </View>
@@ -410,12 +347,8 @@ export default function VendasScreen() {
                                 <View style={styles.itensForm}>
                                     {itens.map(i => (
                                         <View key={i.produto.id} style={styles.itemFormRow}>
-                                            <Text style={styles.itemFormNome}>
-                                                {i.produto.nome} × {i.quantidade}
-                                            </Text>
-                                            <Text style={styles.itemFormValor}>
-                                                {brl(i.produto.preco * i.quantidade)}
-                                            </Text>
+                                            <Text style={styles.itemFormNome}> {i.produto.nome} × {i.quantidade} </Text>
+                                            <Text style={styles.itemFormValor}> {brl(i.produto.preco * i.quantidade)} </Text>
                                             <TouchableOpacity onPress={() => removeItem(i.produto.id)}>
                                                 <Text style={styles.removeItem}>×</Text>
                                             </TouchableOpacity>
@@ -438,19 +371,10 @@ export default function VendasScreen() {
                             />
 
                             <View style={styles.modalAcoes}>
-                                <TouchableOpacity
-                                    style={styles.modalCancelarBtn}
-                                    onPress={() => { setModalVis(false); setItens([]); }}
-                                    activeOpacity={0.8}
-                                >
+                                <TouchableOpacity style={styles.modalCancelarBtn} onPress={() => { setModalVis(false); setItens([]); }} activeOpacity={0.8}>
                                     <Text style={styles.modalCancelarText}>Cancelar</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.salvarBtn, salvando && { opacity: 0.7 }]}
-                                    onPress={salvarVenda}
-                                    disabled={salvando}
-                                    activeOpacity={0.8}
-                                >
+                                <TouchableOpacity style={[styles.salvarBtn, salvando && { opacity: 0.7 }]} onPress={salvarVenda} disabled={salvando} activeOpacity={0.8}>
                                     <Text style={styles.salvarText}>
                                         {salvando ? "Salvando…" : "Registrar Venda"}
                                     </Text>
@@ -480,10 +404,7 @@ export default function VendasScreen() {
                                 </TouchableOpacity>
                             )}
                         />
-                        <TouchableOpacity
-                            style={styles.modalCancelarBtn}
-                            onPress={() => setSelVis(false)}
-                        >
+                        <TouchableOpacity style={styles.modalCancelarBtn} onPress={() => setSelVis(false)}>
                             <Text style={styles.modalCancelarText}>Fechar</Text>
                         </TouchableOpacity>
                     </View>
@@ -494,40 +415,23 @@ export default function VendasScreen() {
 }
 
 const styles = StyleSheet.create({
+    // Layout base
     container:        { flex: 1, backgroundColor: colors.background },
     center:           { flex: 1, justifyContent: "center", alignItems: "center" },
+
+    // Header
     header:           { backgroundColor: colors.primaryDark, padding: 24, paddingTop: 56 },
-    voltar:           { color: colors.primaryLight, fontSize: 14, marginBottom: 8 },
     headerRow:        { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     headerTitle:      { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 2 },
     headerSub:        { fontSize: 13, color: colors.primaryLight },
+    voltarBtn:        { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+    voltarSeta:       { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
+    voltarTexto:      { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
     novoBtn:          { backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
     novoBtnText:      { color: "#fff", fontSize: 14, lineHeight: 22, textAlign: "center", includeFontPadding: false },
-    filtrosContainer: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border, height: 52 },
-    filtros:          { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, gap: 8, alignItems: "center" },
-    filtroBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.background },
-    filtroBtnAtivo:   { backgroundColor: colors.primary },
-    filtroText:       { fontSize: 12, color: colors.muted, fontWeight: "500" },
-    filtroTextAtivo:  { color: "#fff" },
-    empty:            { textAlign: "center", color: colors.muted, marginTop: 40, fontSize: 14 },
-    card:             { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: 16, marginTop: 12, elevation: 2 },
-    cardTop:          { flexDirection: "row", alignItems: "center" },
-    cardNome:         { fontSize: 14, fontWeight: "700", color: colors.primaryDark },
-    cardData:         { fontSize: 11, color: colors.muted, marginTop: 2 },
-    cardValor:        { fontSize: 16, fontWeight: "700", color: colors.primaryDark },
-    badge:            { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, marginTop: 4 },
-    badgeText:        { fontSize: 10, fontWeight: "600" },
-    itensBox:         { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.background, paddingTop: 10 },
-    itemRow:          { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
-    itemNome:         { fontSize: 12, color: colors.muted },
-    itemValor:        { fontSize: 12, fontWeight: "600", color: colors.primaryDark },
-    obs:              { fontSize: 12, color: colors.muted, fontStyle: "italic", marginTop: 6 },
-    acoes:            { flexDirection: "row", gap: 8, marginTop: 12 },
-    finalizarBtn:     { flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, padding: 8, alignItems: "center" },
-    finalizarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
-    cancelarBtn:      { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
-    cancelarText:     { fontSize: 13, color: colors.rose, fontWeight: "600" },
-    buscaBtn:         { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, justifyContent: "center", alignItems: "center", width: 40, height: 40, paddingTop: Platform.OS === "web" ? 0 : 2 },
+
+    // Busca
+    buscaBtn:         { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8, width: 40, height: 40, justifyContent: "center", alignItems: "center", paddingTop: Platform.OS === "web" ? 0 : 2 },
     buscaBtnAtivo:    { backgroundColor: "rgba(255,255,255,0.35)" },
     buscaBtnText:     { color: "#fff", fontSize: 23, lineHeight: 22, textAlign: "center", includeFontPadding: false },
     buscaPanel:       { backgroundColor: "#fff", padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
@@ -535,16 +439,48 @@ const styles = StyleSheet.create({
     buscaDatas:       { flexDirection: "row", gap: 8 },
     limparBtn:        { alignItems: "center", paddingVertical: 6 },
     limparText:       { fontSize: 12, color: colors.rose, fontWeight: "600" },
-    voltarBtn:        { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
-    voltarSeta:       { fontSize: 28, color: colors.primaryLight, lineHeight: 30, fontWeight: "300" },
-    voltarTexto:      { fontSize: 14, color: colors.primaryLight, fontWeight: "500" },
-    // Modal
+
+    // Filtros por status
+    filtrosContainer: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: colors.border, height: 52 },
+    filtros:          { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, gap: 8, alignItems: "center" },
+    filtroBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.background },
+    filtroBtnAtivo:   { backgroundColor: colors.primary },
+    filtroText:       { fontSize: 12, color: colors.muted, fontWeight: "500" },
+    filtroTextAtivo:  { color: "#fff" },
+    empty:            { textAlign: "center", color: colors.muted, marginTop: 40, fontSize: 14 },
+
+    // Card de venda
+    card:             { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginHorizontal: 16, marginTop: 12, elevation: 2 },
+    cardTop:          { flexDirection: "row", alignItems: "center" },
+    cardNome:         { fontSize: 14, fontWeight: "700", color: colors.primaryDark },
+    cardData:         { fontSize: 11, color: colors.muted, marginTop: 2 },
+    cardValor:        { fontSize: 16, fontWeight: "700", color: colors.primaryDark },
+    badge:            { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, marginTop: 4 },
+    badgeText:        { fontSize: 10, fontWeight: "600" },
+
+    // Itens expandidos
+    itensBox:         { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.background, paddingTop: 10 },
+    itemRow:          { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
+    itemNome:         { fontSize: 12, color: colors.muted },
+    itemValor:        { fontSize: 12, fontWeight: "600", color: colors.primaryDark },
+    obs:              { fontSize: 12, color: colors.muted, fontStyle: "italic", marginTop: 6 },
+
+    // Ações do card
+    acoes:            { flexDirection: "row", gap: 8, marginTop: 12 },
+    finalizarBtn:     { flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, padding: 8, alignItems: "center" },
+    finalizarText:    { fontSize: 13, color: colors.primary, fontWeight: "600" },
+    cancelarBtn:      { flex: 1, borderWidth: 1, borderColor: colors.rose, borderRadius: 8, padding: 8, alignItems: "center" },
+    cancelarText:     { fontSize: 13, color: colors.rose, fontWeight: "600" },
+
+    // Modal nova venda
     modalOverlay:     { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalBox:         { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },
     modalTitle:       { fontSize: 20, fontWeight: "700", color: colors.primaryDark, marginBottom: 20 },
     label:            { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 6, marginTop: 8 },
     input:            { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: 14, color: colors.text },
     textarea:         { height: 80, textAlignVertical: "top" },
+
+    // Seletor e quantidade
     seletor:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 4 },
     seletorText:      { fontSize: 14, color: colors.text, flex: 1 },
     seletorArrow:     { fontSize: 12, color: colors.muted },
@@ -554,17 +490,23 @@ const styles = StyleSheet.create({
     qtdVal:           { fontSize: 16, fontWeight: "600", color: colors.primaryDark, minWidth: 30, textAlign: "center" },
     addBtn:           { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, marginLeft: "auto" },
     addBtnText:       { color: "#fff", fontSize: 13, fontWeight: "600" },
+
+    // Itens do formulário
     itensForm:        { backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 4 },
     itemFormRow:      { flexDirection: "row", alignItems: "center", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
     itemFormNome:     { flex: 1, fontSize: 13, color: colors.text },
     itemFormValor:    { fontSize: 13, fontWeight: "600", color: colors.primaryDark, marginRight: 10 },
     removeItem:       { fontSize: 20, color: colors.rose, lineHeight: 22 },
     totalForm:        { textAlign: "right", fontSize: 16, fontWeight: "700", color: colors.primaryDark, marginTop: 8 },
+
+    // Ações do modal
     modalAcoes:       { flexDirection: "row", gap: 12, marginTop: 20 },
     modalCancelarBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center" },
     modalCancelarText:{ fontSize: 14, color: colors.muted, fontWeight: "600" },
     salvarBtn:        { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: "center" },
     salvarText:       { fontSize: 14, color: "#fff", fontWeight: "600" },
+
+    // Modal seleção de produto
     produtoSelItem:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.background },
     produtoSelNome:   { fontSize: 14, color: colors.text, flex: 1 },
     produtoSelPreco:  { fontSize: 14, fontWeight: "600", color: colors.primaryDark },

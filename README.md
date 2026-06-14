@@ -1,9 +1,10 @@
-# 🌺 FloriHub — Mobile
+# 🌺 FloriHub — App
 
 > **Projeto acadêmico** · SENAI Fatesg · Engenharia de Software · 6º Período · 2026
 
-App reativo do sistema PDV FloriHub para floricultura, desenvolvido com **React Native** e **Expo**.  
-Este repositório é o frontend reativo com mobile e web e para o backend consulte a [FloriHub API](https://github.com/gabrielfernandesgf/floriHub-api-rest.git).
+Aplicativo **cross-platform** de Ponto de Venda (PDV) para floricultura, desenvolvido com **React Native** e **Expo**. Roda no celular (Android/iOS) e no navegador web a partir do mesmo código-fonte.
+
+Para o backend consulte a [FloriHub API](https://github.com/gabrielfernandesgf/floriHub-api-rest.git).
 
 ---
 
@@ -13,13 +14,13 @@ Este repositório é o frontend reativo com mobile e web e para o backend consul
 |----------------------------------------------|
 | Gabriel Fernandes Gomes Castanheira de Matos |
 | João Vítor Oliveira                          |
-| Willian Junior Custodio Firmo                |
+| Willian Junior Custorio Firmo                |
 
 ---
 
 ## 📱 Sobre o projeto
 
-O **FloriHub Mobile** é um aplicativo de Ponto de Venda (PDV) para floriculturas que permite gerenciar produtos, vendas e usuários tanto pelo celular quanto pelo computador.
+O **FloriHub App** permite gerenciar produtos, vendas, usuários e relatórios de uma floricultura em qualquer dispositivo. O mesmo projeto roda no celular via **Expo Go** ou build nativo, e no navegador via **Expo Web** — sem necessidade de projetos separados.
 
 ---
 
@@ -33,7 +34,8 @@ O **FloriHub Mobile** é um aplicativo de Ponto de Venda (PDV) para floricultura
 | Linguagem | TypeScript 5.9 |
 | Cliente HTTP | Fetch API nativa |
 | Armazenamento local | AsyncStorage |
-| PDF | expo-file-system + expo-sharing |
+| PDF (mobile) | expo-file-system/legacy + expo-sharing |
+| PDF (web) | Fetch + download via `<a>` |
 
 ---
 
@@ -61,15 +63,13 @@ npm install
 
 **3. Configure a URL da API**
 
-Abra `src/api/api.ts` e ajuste o `BASE_URL` conforme o ambiente:
+O projeto detecta automaticamente o ambiente — nenhuma configuração necessária para o emulador Android ou navegador web. Para **celular físico**, abra `src/api/api.ts` e substitua `10.0.2.2` pelo IP da sua máquina na rede local:
 
 ```ts
 const BASE_URL = Platform.OS === "web"
-  ? "http://localhost:8080"    // navegador
-  : "http://10.0.2.2:8080";   // emulador Android
+  ? "http://localhost:8080"        // navegador web
+  : "http://SEU_IP_LOCAL:8080";   // celular físico
 ```
-
-> Para celular físico, substitua `10.0.2.2` pelo IP da sua máquina na rede local.
 
 **4. Rode o projeto**
 ```bash
@@ -94,47 +94,49 @@ src/
 ├── app/
 │   ├── index.tsx           # Redirecionador (verifica token JWT)
 │   ├── login.tsx           # Tela de login
-│   ├── dashboard.tsx       # Dashboard com métricas
-│   ├── produtos.tsx        # CRUD de produtos
+│   ├── dashboard.tsx       # Dashboard com métricas e atalhos
+│   ├── produtos.tsx        # CRUD de produtos (grid no web)
 │   ├── vendas.tsx          # Registro e acompanhamento de vendas
 │   ├── usuarios.tsx        # Gerenciamento de usuários (ADMIN)
 │   └── relatorio.tsx       # Relatório de vendas com exportação PDF
+├── components/
+│   └── ConfirmModal.tsx    # Modal de confirmação reutilizável
 ├── styles/
 │   └── global.ts           # Paleta de cores e tipografia
 ├── utils/
-│   ├── helpers.ts          # Funções auxiliares (brl, parseData, etc.)
+│   ├── helpers.ts          # Funções auxiliares (brl, parseData, mascaraData, etc.)
 │   └── types/
 │       ├── Produto.ts      # Interfaces e constantes de produto
 │       ├── Venda.ts        # Interfaces e constantes de venda
 │       ├── Usuario.ts      # Interfaces de usuário
 │       └── Relatorio.ts    # Interfaces de relatório
 └── web/
-    └── index.html          # Layout web com largura fixa (390px)
+    └── index.html          # Layout web com largura fixa centralizada
 ```
 
 ---
 
 ## 📲 Telas disponíveis
 
-| Tela | Descrição                                                     |
-|---|---------------------------------------------------------------|
-| `index` | Verifica token JWT e redireciona para login ou dashboard      |
-| `login` | Autenticação com e-mail e senha                               |
-| `dashboard` | Métricas de receita, vendas abertas, estoque crítico e atalhos |
-| `produtos` | Catálogo com criação, edição e desativação de produtos        |
-| `vendas` | Registro de vendas, filtros por status, cliente e período     |
-| `usuarios` | Gerenciamento de usuários, exclusivo para ADMIN               |
-| `relatorio` | Relatório com métricas, top produtos e exportação em PDF      |
+| Tela | Descrição |
+|---|---|
+| `index` | Verifica token JWT e redireciona para login ou dashboard |
+| `login` | Autenticação com e-mail e senha |
+| `dashboard` | Métricas de receita, vendas abertas, estoque crítico e atalhos de navegação |
+| `produtos` | Catálogo com criação, edição e desativação — grid de 3 colunas no web |
+| `vendas` | Registro de vendas, filtros por status, busca por cliente e período |
+| `usuarios` | Gerenciamento de usuários — exclusivo para ADMIN, grid no web |
+| `relatorio` | Relatório com métricas e top produtos, exportação em PDF |
 
 ---
 
 ## 🔐 Autenticação
 
-Após o login, o token JWT é salvo no `AsyncStorage` e enviado automaticamente no header `Authorization: Bearer <token>` em todas as requisições.
+Após o login, o token JWT é salvo no `AsyncStorage` e enviado automaticamente no header `Authorization: Bearer <token>` em todas as requisições. Tokens expirados redirecionam automaticamente para o login.
 
 ```ts
 headers: {
-  "Content-Type": "application/json":
+  "Content-Type": "application/json",
   ...(token && { Authorization: `Bearer ${token}` }),
 }
 ```
@@ -148,7 +150,8 @@ headers: {
 | Dashboard | ✅ | ✅ |
 | Produtos (visualizar) | ✅ | ✅ |
 | Produtos (criar/editar/desativar) | ✅ | ✅ |
-| Vendas | ✅ | ✅ |
+| Vendas (próprias) | ✅ | ✅ |
+| Vendas (todas) | ❌ | ✅ |
 | Usuários | ❌ | ✅ |
 | Relatório | ✅ | ✅ |
 
@@ -156,8 +159,9 @@ headers: {
 
 ## 📄 Exportação de PDF
 
-O relatório de vendas pode ser exportado em PDF diretamente pelo app. O backend gera o arquivo via `GET /relatorios/vendas.pdf` e o app faz o download autenticado e abre o menu de compartilhamento.
+O relatório de vendas pode ser exportado em PDF com filtros de período e status. O comportamento varia por plataforma:
 
+**Mobile** — download autenticado via `expo-file-system` e compartilhamento nativo:
 ```ts
 const { uri } = await FileSystem.downloadAsync(url, destino, {
   headers: { Authorization: `Bearer ${token}` },
@@ -165,12 +169,23 @@ const { uri } = await FileSystem.downloadAsync(url, destino, {
 await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
 ```
 
+**Web** — download direto via fetch e `<a download>`:
+```ts
+const blob = await response.blob();
+const link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.download = "relatorio-florihub.pdf";
+link.click();
+```
+
 ---
 
 ## 📝 Observações
 
+- **Cross-platform:** o mesmo código roda no Android, iOS e navegador web sem alterações.
+- **Grid responsivo:** telas de produtos e usuários exibem 3 colunas no web e 1 coluna no mobile.
 - **Soft delete:** produtos e usuários desativados são ocultados das listagens sem serem removidos do banco.
 - **Snapshot de preço:** o preço registrado na venda não muda mesmo que o produto seja editado posteriormente.
 - **Restauração de estoque:** ao cancelar uma venda, o estoque dos produtos é restaurado automaticamente pelo backend.
-- **Emulador Android:** use `http://10.0.2.2:8080` como URL do backend — `localhost` não funciona no emulador.
-- **Web:** ao rodar com `w`, o app é exibido em largura fixa de 390px centralizado na tela.
+- **Emulador Android:** usa `http://10.0.2.2:8080` automaticamente — `localhost` não funciona no emulador.
+- **Sessão expirada:** token JWT expirado redireciona automaticamente para o login sem mostrar erro.

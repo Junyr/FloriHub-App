@@ -12,6 +12,7 @@ import { STATUS_CORES, Venda } from "@/utils/types/Venda";
 import { Produto } from "@/utils/types/Produto";
 import { Usuario } from "@/utils/types/Usuario";
 import ConfirmModal from "@/components/ConfirmModal";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const METRICAS = (receita: number, finalizadas: Venda[], ticket: number, abertas: number, semEstoque: number) => [
     { label: "Receita Total",  value: brl(receita), sub: `${finalizadas.length} finalizadas`, accent: colors.primary     },
@@ -33,6 +34,8 @@ export default function DashboardScreen() {
     const [load,     setLoad]     = useState(true);
     const [refresh,  setRefresh]  = useState(false);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
+    const insets = useSafeAreaInsets();
 
     const carregar = async () => {
         try {
@@ -102,8 +105,8 @@ export default function DashboardScreen() {
                 />
             )}
             {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerRow}>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.headerTitle}>🌺 FloriHub</Text>
                         <Text style={styles.headerSub}>

@@ -9,6 +9,7 @@ import { getProdutos, createProduto, updateProduto, deleteProduto } from "@/api/
 import {brl, ConfirmState, handleVoltar} from "@/utils/helpers";
 import {CATEGORIAS, CATEGORIAS_CORES, FORM_VAZIO, FormProduto, Produto} from "@/utils/types/Produto";
 import ConfirmModal from "@/components/ConfirmModal";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const numColunas = Platform.OS === "web" ? 3 : 1;
 
@@ -24,6 +25,7 @@ export default function ProdutosScreen() {
     const [salvando,   setSalvando]   = useState(false);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
+    const insets = useSafeAreaInsets();
 
     const carregar = async () => {
         try {
@@ -141,8 +143,8 @@ export default function ProdutosScreen() {
                 />
             )}
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
                     <Text style={styles.voltarSeta}>‹</Text>
                     <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>

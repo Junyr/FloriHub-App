@@ -7,7 +7,7 @@ import { colors } from "@/styles/global";
 import { getRelatorio, getRelatorioPdfUrl, getToken } from "@/api/api";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing   from "expo-sharing";
-
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {brl, ConfirmState, handleVoltar, mascaraData, parseDateToISO} from "@/utils/helpers";
 import { TextInput } from "react-native";
 import { Relatorio } from "@/utils/types/Relatorio";
@@ -22,6 +22,8 @@ export default function RelatorioScreen() {
     const [status,     setStatus]     = useState("Todos");
     const [baixando, setBaixando] = useState(false);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
+    const insets = useSafeAreaInsets();
 
     const gerar = async () => {
         setLoad(true);
@@ -125,8 +127,8 @@ export default function RelatorioScreen() {
                 />
             )}
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
                     <Text style={styles.voltarSeta}>‹</Text>
                     <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>

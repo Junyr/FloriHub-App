@@ -12,6 +12,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { Produto } from "@/utils/types/Produto";
 import {Usuario} from "@/utils/types/Usuario";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
@@ -34,6 +35,8 @@ export default function VendasScreen() {
     const [salvando,  setSalvando]  = useState(false);
     const [selVis,    setSelVis]    = useState(false);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
+    const insets = useSafeAreaInsets();
 
     useEffect(() => {
         AsyncStorage.getItem("florihub_usuario").then((u) => {
@@ -189,8 +192,8 @@ export default function VendasScreen() {
                 />
             )}
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
                     <Text style={styles.voltarSeta}>‹</Text>
                     <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>

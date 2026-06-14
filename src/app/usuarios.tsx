@@ -10,6 +10,7 @@ import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "@/api/
 import {ConfirmState, handleVoltar} from "@/utils/helpers";
 import {FORM_VAZIO, FormUsuario, ROLE_CORES, Usuario} from "@/utils/types/Usuario";
 import ConfirmModal from "@/components/ConfirmModal";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const numColunas = Platform.OS === "web" ? 3 : 1;
 
@@ -23,6 +24,8 @@ export default function UsuariosScreen() {
     const [salvando,  setSalvando]  = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<{ role: string } | null>(null);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
+    const insets = useSafeAreaInsets();
 
     const carregar = async () => {
         try {
@@ -153,8 +156,8 @@ export default function UsuariosScreen() {
                 />
             )}
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>
                     <Text style={styles.voltarSeta}>‹</Text>
                     <Text style={styles.voltarTexto}>Voltar</Text>
                 </TouchableOpacity>

@@ -1,11 +1,12 @@
 import {router} from "expo-router";
 
 export interface ConfirmState {
-    titulo:      string;
-    mensagem:    string;
-    confirmText: string;
-    perigoso:    boolean;
-    onConfirm:   () => void;
+    titulo:       string;
+    mensagem:     string;
+    confirmText:  string;
+    perigoso:     boolean;
+    apenasAviso?: boolean;
+    onConfirm:    () => void;
 }
 
 export const handleVoltar = () => {

@@ -12,38 +12,32 @@ export const getToken = () => AsyncStorage.getItem(TOKEN_KEY);
 const setToken = (t: string) => AsyncStorage.setItem(TOKEN_KEY, t);
 
 async function request(method: string, path: string, body?: object) {
-    try {
-        const token = await getToken();
+    const token = await getToken();
 
-        const response = await fetch(BASE_URL + path, {
-            method,
-            headers: {
-                "Content-Type": "application/json",
-                ...(token && { Authorization: `Bearer ${token}` }),
-            },
-            ...(body && { body: JSON.stringify(body) }),
-        });
+    const response = await fetch(BASE_URL + path, {
+        method,
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        ...(body && { body: JSON.stringify(body) }),
+    });
 
-        const text = await response.text();
-        const data = text ? JSON.parse(text) : null;
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
 
-        if (response.status === 401 || response.status === 403) {
-            await AsyncStorage.removeItem("florihub_token");
-            await AsyncStorage.removeItem("florihub_usuario");
-            router.replace("/login");
-            throw new Error("Sessão expirada. Faça login novamente.");
-        }
-
-        if (!response.ok) {
-            throw new Error(data?.message || data?.mensagem || `Erro ${response.status}`);
-        }
-
-        return data;
-
-    } catch (e: any) {
-        console.error("ERRO:", method, BASE_URL + path, e.message);
-        throw e;
+    if (response.status === 401 || response.status === 403) {
+        await AsyncStorage.removeItem("florihub_token");
+        await AsyncStorage.removeItem("florihub_usuario");
+        router.replace("/login");
+        throw new Error("Sessão expirada. Faça login novamente.");
     }
+
+    if (!response.ok) {
+        throw new Error(data?.message || data?.mensagem || `Erro ${response.status}`);
+    }
+
+    return data;
 }
 
 export async function login(email: string, senha: string) {

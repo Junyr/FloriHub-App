@@ -3,6 +3,9 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "@/styles/global";
+import { LogBox } from "react-native";
+
+LogBox.ignoreAllLogs();
 
 export default function Index() {
   useEffect(() => {

@@ -1,17 +1,18 @@
 import { useState } from "react";
 import {
     View, Text, ScrollView, StyleSheet,
-    ActivityIndicator, TouchableOpacity, Alert, Platform,
+    ActivityIndicator, TouchableOpacity, Platform,
 } from "react-native";
 import { colors } from "@/styles/global";
 import { getRelatorio, getRelatorioPdfUrl, getToken } from "@/api/api";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing   from "expo-sharing";
 
-import {brl, handleVoltar, mascaraData, parseDateToISO} from "@/utils/helpers";
+import {brl, ConfirmState, handleVoltar, mascaraData, parseDateToISO} from "@/utils/helpers";
 import { TextInput } from "react-native";
 import { Relatorio } from "@/utils/types/Relatorio";
 import { STATUS_CORES } from "@/utils/types/Venda";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function RelatorioScreen() {
     const [relatorio, setRelatorio] = useState<Relatorio | null>(null);
@@ -20,7 +21,7 @@ export default function RelatorioScreen() {
     const [dataFim,    setDataFim]    = useState("");
     const [status,     setStatus]     = useState("Todos");
     const [baixando, setBaixando] = useState(false);
-
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
     const gerar = async () => {
         setLoad(true);
@@ -32,7 +33,14 @@ export default function RelatorioScreen() {
             });
             setRelatorio(data);
         } catch (e: any) {
-            Alert.alert("Erro", e.message || "Erro ao gerar relatório.");
+            setConfirm({
+                titulo:      "Erro",
+                mensagem:    e.message || "Erro ao gerar relatório.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
         } finally {
             setLoad(false);
         }
@@ -78,11 +86,25 @@ export default function RelatorioScreen() {
                     dialogTitle: "Relatório FloriHub",
                 });
             } else {
-                Alert.alert("Sucesso", "PDF gerado com sucesso.");
+                setConfirm({
+                    titulo:      "Sucesso",
+                    mensagem:    "PDF gerado com sucesso.",
+                    confirmText: "OK",
+                    perigoso:    false,
+                    apenasAviso: true,
+                    onConfirm:   () => setConfirm(null),
+                });
             }
 
         } catch (e: any) {
-            Alert.alert("Erro", e.message || "Erro ao baixar PDF.");
+            setConfirm({
+                titulo:      "Erro",
+                mensagem:    e.message || "Erro ao baixar PDF.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
         } finally {
             setBaixando(false);
         }
@@ -92,6 +114,18 @@ export default function RelatorioScreen() {
 
     return (
         <View style={styles.container}>
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>

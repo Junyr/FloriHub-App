@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
     View, Text, FlatList, StyleSheet, ActivityIndicator,
-    RefreshControl, TouchableOpacity, Alert, TextInput,
+    RefreshControl, TouchableOpacity, TextInput,
     Modal, ScrollView, KeyboardAvoidingView, Platform,
 } from "react-native";
 import { colors } from "@/styles/global";
@@ -70,7 +70,14 @@ export default function ProdutosScreen() {
     // CRUD
     const salvar = async () => {
         if (!form.nome || !form.preco || !form.quantidadeEstoque) {
-            Alert.alert("Atenção", "Preencha os campos obrigatórios.");
+            setConfirm({
+                titulo:      "Atenção",
+                mensagem:    "Preencha os campos obrigatórios.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
             return;
         }
         setSalvando(true);
@@ -87,7 +94,14 @@ export default function ProdutosScreen() {
             setModalVis(false);
             carregar();
         } catch (e: any) {
-            Alert.alert("Erro", e.message || "Erro ao salvar produto.");
+            setConfirm({
+                titulo:      "Erro",
+                mensagem:    e.message || "Erro ao salvar produto.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
         } finally {
             setSalvando(false);
         }
@@ -121,6 +135,7 @@ export default function ProdutosScreen() {
                     mensagem={confirm.mensagem}
                     confirmText={confirm.confirmText}
                     perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
                     onConfirm={confirm.onConfirm}
                     onCancel={() => setConfirm(null)}
                 />

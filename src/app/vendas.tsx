@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-    View, Text, FlatList, StyleSheet, ActivityIndicator,
-    RefreshControl, TouchableOpacity, Alert, Modal,
+    View, Text, FlatList, StyleSheet,
+    RefreshControl, TouchableOpacity, Modal,
     ScrollView, KeyboardAvoidingView, Platform, TextInput,
 } from "react-native";
 import { colors } from "@/styles/global";
@@ -94,7 +94,14 @@ export default function VendasScreen() {
     // CRUD de vendas
     const salvarVenda = async () => {
         if (itens.length === 0) {
-            Alert.alert("Atenção", "Adicione ao menos um item.");
+            setConfirm({
+                titulo:      "Atenção",
+                mensagem:    "Adicione pelo menos um item.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
             return;
         }
         setSalvando(true);
@@ -113,7 +120,14 @@ export default function VendasScreen() {
             setObs("");
             carregar();
         } catch (e: any) {
-            Alert.alert("Erro", e.message || "Erro ao registrar venda.");
+            setConfirm({
+                titulo:      "Erro",
+                mensagem:    e.message || "Erro ao salvar produto.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
         } finally {
             setSalvando(false);
         }
@@ -155,6 +169,7 @@ export default function VendasScreen() {
                     mensagem={confirm.mensagem}
                     confirmText={confirm.confirmText}
                     perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
                     onConfirm={confirm.onConfirm}
                     onCancel={() => setConfirm(null)}
                 />

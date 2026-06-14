@@ -2,14 +2,15 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity } from "react-native";
 import { colors } from "@/styles/global";
 
 interface Props {
-    visible:    boolean;
-    titulo:     string;
-    mensagem:   string;
+    visible:      boolean;
+    titulo:       string;
+    mensagem:     string;
     confirmText?: string;
     cancelText?:  string;
     perigoso?:    boolean;
-    onConfirm:  () => void;
-    onCancel:   () => void;
+    apenasAviso?: boolean;
+    onConfirm:    () => void;
+    onCancel?:    () => void;
 }
 
 export default function ConfirmModal({
@@ -17,6 +18,7 @@ export default function ConfirmModal({
                                          confirmText = "Confirmar",
                                          cancelText  = "Cancelar",
                                          perigoso    = false,
+                                         apenasAviso = false,
                                          onConfirm, onCancel,
                                      }: Props) {
     return (
@@ -26,11 +28,17 @@ export default function ConfirmModal({
                     <Text style={styles.titulo}>{titulo}</Text>
                     <Text style={styles.mensagem}>{mensagem}</Text>
                     <View style={styles.acoes}>
-                        <TouchableOpacity style={styles.cancelarBtn} onPress={onCancel} activeOpacity={0.8}>
-                            <Text style={styles.cancelarText}>{cancelText}</Text>
-                        </TouchableOpacity>
+                        {!apenasAviso && (
+                            <TouchableOpacity style={styles.cancelarBtn} onPress={onCancel} activeOpacity={0.8}>
+                                <Text style={styles.cancelarText}>{cancelText}</Text>
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity
-                            style={[styles.confirmarBtn, perigoso && styles.confirmarBtnPerigoso]}
+                            style={[
+                                styles.confirmarBtn,
+                                perigoso    && styles.confirmarBtnPerigoso,
+                                apenasAviso && styles.confirmarBtnAviso,
+                            ]}
                             onPress={onConfirm}
                             activeOpacity={0.8}
                         >
@@ -53,5 +61,6 @@ const styles = StyleSheet.create({
     cancelarText:         { fontSize: 14, color: colors.muted, fontWeight: "600" },
     confirmarBtn:         { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 12, alignItems: "center" },
     confirmarBtnPerigoso: { backgroundColor: colors.rose },
+    confirmarBtnAviso:    { backgroundColor: colors.primary },
     confirmarText:        { fontSize: 14, color: "#fff", fontWeight: "600" },
 });

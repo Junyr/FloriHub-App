@@ -7,15 +7,26 @@ import {
 import { router } from "expo-router";
 import { colors } from "@/styles/global";
 import { login } from "@/api/api";
+import {ConfirmState} from "@/utils/helpers";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function LoginScreen() {
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
     const [load,  setLoad]  = useState(false);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
 
     const handleLogin = async () => {
         if (!email || !senha) {
-            Alert.alert("Atenção", "Preencha e-mail e senha.");
+            setConfirm({
+                titulo:      "Atenção",
+                mensagem:    "Preencha e-mail e senha.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
             return;
         }
         setLoad(true);
@@ -23,7 +34,14 @@ export default function LoginScreen() {
             await login(email, senha);
             router.replace("/dashboard");
         } catch (e: any) {
-            Alert.alert("Erro", e.message || "Credenciais inválidas.");
+            setConfirm({
+                titulo:      "Erro",
+                mensagem:    e.message || "Credenciais inválidas.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
         } finally {
             setLoad(false);
         }
@@ -34,6 +52,18 @@ export default function LoginScreen() {
             style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Logo */}
             <View style={styles.logoArea}>
                 <Text style={styles.emoji}>🌺</Text>

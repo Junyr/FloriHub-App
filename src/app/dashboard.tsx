@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator, Alert, RefreshControl, ScrollView,
+    ActivityIndicator, RefreshControl, ScrollView,
     StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -96,6 +96,7 @@ export default function DashboardScreen() {
                     mensagem={confirm.mensagem}
                     confirmText={confirm.confirmText}
                     perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
                     onConfirm={confirm.onConfirm}
                     onCancel={() => setConfirm(null)}
                 />

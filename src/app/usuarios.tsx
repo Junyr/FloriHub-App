@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import {
     View, Text, FlatList, StyleSheet, ActivityIndicator,
-    RefreshControl, TouchableOpacity, Alert, Modal,
+    RefreshControl, TouchableOpacity, Modal,
     ScrollView, KeyboardAvoidingView, Platform, TextInput,
 } from "react-native";
-import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "@/styles/global";
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "@/api/api";
@@ -73,11 +72,25 @@ export default function UsuariosScreen() {
     // CRUD
     const salvar = async () => {
         if (!form.nome || !form.email) {
-            Alert.alert("Atenção", "Nome e e-mail são obrigatórios.");
+            setConfirm({
+                titulo:      "Atenção",
+                mensagem:    "Nome e e-mail são obrigatórios.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
             return;
         }
         if (!editando && !form.senha) {
-            Alert.alert("Atenção", "Senha obrigatória para novo usuário.");
+            setConfirm({
+                titulo:      "Atenção",
+                mensagem:    "Senha obrigatória para novo usuário.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
             return;
         }
         setSalvando(true);
@@ -93,7 +106,14 @@ export default function UsuariosScreen() {
             setModalVis(false);
             carregar();
         } catch (e: any) {
-            Alert.alert("Erro", e.message || "Erro ao salvar usuário.");
+            setConfirm({
+                titulo:      "Erro",
+                mensagem:    e.message || "Erro ao salvar usuário.",
+                confirmText: "OK",
+                perigoso:    false,
+                apenasAviso: true,
+                onConfirm:   () => setConfirm(null),
+            });
         } finally {
             setSalvando(false);
         }
@@ -127,6 +147,7 @@ export default function UsuariosScreen() {
                     mensagem={confirm.mensagem}
                     confirmText={confirm.confirmText}
                     perigoso={confirm.perigoso}
+                    apenasAviso={confirm.apenasAviso}
                     onConfirm={confirm.onConfirm}
                     onCancel={() => setConfirm(null)}
                 />

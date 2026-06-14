@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
     View, Text, ScrollView, StyleSheet,
-    ActivityIndicator, TouchableOpacity, Alert,
+    ActivityIndicator, TouchableOpacity, Alert, Platform,
 } from "react-native";
 import { colors } from "@/styles/global";
 import { getRelatorio, getRelatorioPdfUrl, getToken } from "@/api/api";
@@ -20,6 +20,7 @@ export default function RelatorioScreen() {
     const [dataFim,    setDataFim]    = useState("");
     const [status,     setStatus]     = useState("Todos");
     const [baixando, setBaixando] = useState(false);
+
 
     const gerar = async () => {
         setLoad(true);
@@ -46,6 +47,23 @@ export default function RelatorioScreen() {
                 fim:    dataFim    ? parseDateToISO(dataFim)    : undefined,
                 status: status !== "Todos" ? status : undefined,
             });
+
+            if (Platform.OS === "web") {
+                const response = await fetch(url, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (!response.ok) throw new Error("Erro ao baixar PDF");
+
+                const blob     = await response.blob();
+                const blobUrl  = URL.createObjectURL(blob);
+                const link     = document.createElement("a");
+                link.href      = blobUrl;
+                link.download  = `relatorio-florihub.pdf`;
+                link.click();
+                URL.revokeObjectURL(blobUrl);
+                return;
+            }
 
             const destino = FileSystem.cacheDirectory + "relatorio-florihub.pdf";
 

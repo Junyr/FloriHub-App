@@ -6,16 +6,11 @@ import {
 } from "react-native";
 import { colors } from "@/styles/global";
 import { getProdutos, createProduto, updateProduto, deleteProduto } from "@/api/api";
-import {brl, handleVoltar} from "@/utils/helpers";
+import {brl, ConfirmState, handleVoltar} from "@/utils/helpers";
 import {CATEGORIAS, CATEGORIAS_CORES, FORM_VAZIO, FormProduto, Produto} from "@/utils/types/Produto";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const numColunas = Platform.OS === "web" ? 3 : 1;
-
-const confirmarDesativar = (p: Produto, onConfirm: () => void) =>
-    Alert.alert("Confirmar", `Desativar "${p.nome}"?`, [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Desativar", style: "destructive", onPress: onConfirm },
-    ]);
 
 export default function ProdutosScreen() {
     const [produtos,   setProdutos]   = useState<Produto[]>([]);
@@ -27,6 +22,8 @@ export default function ProdutosScreen() {
     const [editando,   setEditando]   = useState<Produto | null>(null);
     const [form,       setForm]       = useState<FormProduto>(FORM_VAZIO);
     const [salvando,   setSalvando]   = useState(false);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+
 
     const carregar = async () => {
         try {
@@ -97,9 +94,16 @@ export default function ProdutosScreen() {
     };
 
     const desativar = (p: Produto) =>
-        confirmarDesativar(p, async () => {
-            await deleteProduto(p.id);
-            carregar();
+        setConfirm({
+            titulo:      "Desativar Produto",
+            mensagem:    `Desativar "${p.nome}"? O produto não aparecerá mais nas listagens.`,
+            confirmText: "Desativar",
+            perigoso:    true,
+            onConfirm:   async () => {
+                await deleteProduto(p.id);
+                setConfirm(null);
+                carregar();
+            },
         });
 
     if (load) return (
@@ -110,6 +114,17 @@ export default function ProdutosScreen() {
 
     return (
         <View style={styles.container}>
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>

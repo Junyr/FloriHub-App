@@ -6,31 +6,10 @@ import {
 } from "react-native";
 import { colors } from "@/styles/global";
 import { createVenda, getProdutos, getVendas, updateVendaStatus } from "@/api/api";
-import { brl, handleVoltar, mascaraData, parseData } from "@/utils/helpers";
+import {brl, ConfirmState, handleVoltar, mascaraData, parseData} from "@/utils/helpers";
 import { FILTROS, ItemForm, STATUS_CORES, Venda } from "@/utils/types/Venda";
+import ConfirmModal from "@/components/ConfirmModal";
 import { Produto } from "@/utils/types/Produto";
-
-const confirmarCancelar = (v: Venda, onConfirm: () => void) => {
-    if (Platform.OS === "web") {
-        if (window.confirm(`Cancelar a venda de ${brl(v.valorTotal)}?`)) onConfirm();
-        return;
-    }
-    Alert.alert("Cancelar Venda", `Cancelar a venda de ${brl(v.valorTotal)}?`, [
-        { text: "Não", style: "cancel" },
-        { text: "Sim, cancelar", style: "destructive", onPress: onConfirm },
-    ]);
-};
-
-const confirmarFinalizar = (v: Venda, onConfirm: () => void) => {
-    if (Platform.OS === "web") {
-        if (window.confirm(`Finalizar a venda de ${brl(v.valorTotal)}?`)) onConfirm();
-        return;
-    }
-    Alert.alert("Finalizar Venda", `Finalizar a venda de ${brl(v.valorTotal)}?`, [
-        { text: "Não", style: "cancel" },
-        { text: "Finalizar", onPress: onConfirm },
-    ]);
-};
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
@@ -51,6 +30,7 @@ export default function VendasScreen() {
     const [obs,       setObs]       = useState("");
     const [salvando,  setSalvando]  = useState(false);
     const [selVis,    setSelVis]    = useState(false);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
     const carregar = async () => {
         try {
@@ -140,25 +120,45 @@ export default function VendasScreen() {
     };
 
     const cancelarVenda = (v: Venda) =>
-        confirmarCancelar(v, async () => {
-            await updateVendaStatus(v.id, "CANCELADA");
-            carregar();
+        setConfirm({
+            titulo:      "Cancelar Venda",
+            mensagem:    `Cancelar a venda de ${brl(v.valorTotal)}? O estoque será restaurado.`,
+            confirmText: "Sim, cancelar",
+            perigoso:    true,
+            onConfirm:   async () => {
+                await updateVendaStatus(v.id, "CANCELADA");
+                setConfirm(null);
+                carregar();
+            },
         });
 
     const finalizarVenda = (v: Venda) =>
-        confirmarFinalizar(v, async () => {
-            await updateVendaStatus(v.id, "FINALIZADA");
-            carregar();
+        setConfirm({
+            titulo:      "Finalizar Venda",
+            mensagem:    `Finalizar a venda de ${brl(v.valorTotal)}?`,
+            confirmText: "Finalizar",
+            perigoso:    false,
+            onConfirm:   async () => {
+                await updateVendaStatus(v.id, "FINALIZADA");
+                setConfirm(null);
+                carregar();
+            },
         });
-
-    if (load) return (
-        <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-    );
 
     return (
         <View style={styles.container}>
+            {/* Modal de confirmação */}
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>

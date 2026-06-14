@@ -1,5 +1,13 @@
 import {router} from "expo-router";
 
+export interface ConfirmState {
+    titulo:      string;
+    mensagem:    string;
+    confirmText: string;
+    perigoso:    boolean;
+    onConfirm:   () => void;
+}
+
 export const handleVoltar = () => {
     if (router.canGoBack()) {
         router.back();

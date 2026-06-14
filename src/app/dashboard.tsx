@@ -7,10 +7,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { colors } from "@/styles/global";
 import { getProdutos, getVendas, logout } from "@/api/api";
-import { brl } from "@/utils/helpers";
+import {brl, ConfirmState} from "@/utils/helpers";
 import { STATUS_CORES, Venda } from "@/utils/types/Venda";
 import { Produto } from "@/utils/types/Produto";
 import { Usuario } from "@/utils/types/Usuario";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const METRICAS = (receita: number, finalizadas: Venda[], ticket: number, abertas: number, semEstoque: number) => [
     { label: "Receita Total",  value: brl(receita), sub: `${finalizadas.length} finalizadas`, accent: colors.primary     },
@@ -31,6 +32,7 @@ export default function DashboardScreen() {
     const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
     const [load,     setLoad]     = useState(true);
     const [refresh,  setRefresh]  = useState(false);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
     const carregar = async () => {
         try {
@@ -63,14 +65,18 @@ export default function DashboardScreen() {
     const semEstoque  = produtos.filter(p => p.ativo && p.quantidadeEstoque === 0).length;
     const criticos    = produtos.filter(p => p.ativo && p.quantidadeEstoque <= 5);
 
+    // Handlers
     const confirmarLogout = () =>
-        Alert.alert("Sair", "Deseja encerrar a sessão?", [
-            { text: "Cancelar", style: "cancel" },
-            { text: "Sair", style: "destructive", onPress: async () => {
-                    await logout();
-                    router.replace("/login");
-                }},
-        ]);
+        setConfirm({
+            titulo:      "Sair",
+            mensagem:    "Deseja encerrar a sessão?",
+            confirmText: "Sair",
+            perigoso:    true,
+            onConfirm:   async () => {
+                await logout();
+                router.replace("/login");
+            },
+        });
 
     return (
         <ScrollView
@@ -83,6 +89,17 @@ export default function DashboardScreen() {
                 />
             }
         >
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.headerRow}>

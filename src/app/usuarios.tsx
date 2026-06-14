@@ -8,21 +8,11 @@ import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "@/styles/global";
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "@/api/api";
-import {handleVoltar} from "@/utils/helpers";
+import {ConfirmState, handleVoltar} from "@/utils/helpers";
 import {FORM_VAZIO, FormUsuario, ROLE_CORES, Usuario} from "@/utils/types/Usuario";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const numColunas = Platform.OS === "web" ? 3 : 1;
-
-
-const confirmarDesativar = (u: Usuario, onConfirm: () => void) =>
-    Alert.alert(
-        "Confirmar",
-        `Desativar "${u.nome}"? O usuário não poderá mais fazer login.`,
-        [
-            { text: "Cancelar", style: "cancel" },
-            { text: "Desativar", style: "destructive", onPress: onConfirm },
-        ]
-    );
 
 export default function UsuariosScreen() {
     const [usuarios,  setUsuarios]  = useState<Usuario[]>([]);
@@ -33,6 +23,7 @@ export default function UsuariosScreen() {
     const [form,      setForm]      = useState<FormUsuario>(FORM_VAZIO);
     const [salvando,  setSalvando]  = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<{ role: string } | null>(null);
+    const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
     const carregar = async () => {
         try {
@@ -108,23 +99,18 @@ export default function UsuariosScreen() {
         }
     };
 
-    const desativar = (u: Usuario) => {
-        Alert.alert(
-            "Confirmar",
-            `Desativar "${u.nome}"? O usuário não poderá mais fazer login.`,
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Desativar",
-                    style: "destructive",
-                    onPress: async () => {
-                        await deleteUsuario(u.id);
-                        carregar();
-                    },
-                },
-            ]
-        );
-    };
+    const desativar = (u: Usuario) =>
+        setConfirm({
+            titulo:      "Desativar Usuário",
+            mensagem:    `Desativar "${u.nome}"? O usuário não poderá mais fazer login.`,
+            confirmText: "Desativar",
+            perigoso:    true,
+            onConfirm:   async () => {
+                await deleteUsuario(u.id);
+                setConfirm(null);
+                carregar();
+            },
+        });
 
     if (load) return (
         <View style={styles.center}>
@@ -134,6 +120,17 @@ export default function UsuariosScreen() {
 
     return (
         <View style={styles.container}>
+            {confirm && (
+                <ConfirmModal
+                    visible={true}
+                    titulo={confirm.titulo}
+                    mensagem={confirm.mensagem}
+                    confirmText={confirm.confirmText}
+                    perigoso={confirm.perigoso}
+                    onConfirm={confirm.onConfirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleVoltar} activeOpacity={0.8} style={styles.voltarBtn}>

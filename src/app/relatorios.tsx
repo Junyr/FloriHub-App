@@ -61,8 +61,6 @@ export default function RelatorioScreen() {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                if (!response.ok) throw new Error("Erro ao baixar PDF");
-
                 const blob     = await response.blob();
                 const blobUrl  = URL.createObjectURL(blob);
                 const link     = document.createElement("a");

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
     View, Text, TextInput, TouchableOpacity,
-    StyleSheet, ActivityIndicator, Alert,
+    StyleSheet, ActivityIndicator,
     KeyboardAvoidingView, Platform,
 } from "react-native";
 import { router } from "expo-router";

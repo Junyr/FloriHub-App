@@ -134,7 +134,7 @@ Após o login, o token JWT é salvo no `AsyncStorage` e enviado automaticamente 
 
 ```ts
 headers: {
-  "Content-Type": "application/json",
+  "Content-Type": "application/json":
   ...(token && { Authorization: `Bearer ${token}` }),
 }
 ```

@@ -47,7 +47,7 @@ export default function DashboardScreen() {
 
     useEffect(() => {
         AsyncStorage.getItem("florihub_usuario").then((u) => {
-            if (u) setUsuarioLogado(JSON.parse(u)); // ← estado separado
+            if (u) setUsuarioLogado(JSON.parse(u));
         });
         carregar();
     }, []);
@@ -159,7 +159,7 @@ export default function DashboardScreen() {
                     return (
                         <View key={v.id} style={styles.vendaRow}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.vendaNome}> {v.nomeCliente || "Consumidor Final"} </Text>
+                                <Text style={styles.vendaNome}>{v.nomeCliente || "Consumidor Final"}</Text>
                                 <Text style={styles.vendaData}>
                                     Vendedor: {v.nomeVendedor} • {new Date(v.dataVenda).toLocaleDateString("pt-BR")}
                                 </Text>

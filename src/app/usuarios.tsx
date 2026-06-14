@@ -286,7 +286,7 @@ export default function UsuariosScreen() {
                                         onPress={() => setForm({ ...form, role: r })}
                                         activeOpacity={0.8}
                                     >
-                                        <Text style={[styles.roleText, form.role === r && styles.roleTextAtivo]}> {r} </Text>
+                                        <Text style={[styles.roleText, form.role === r && styles.roleTextAtivo]}>{r}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>

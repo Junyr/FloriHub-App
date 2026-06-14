@@ -10,10 +10,13 @@ import {brl, ConfirmState, handleVoltar, mascaraData, parseData} from "@/utils/h
 import { FILTROS, ItemForm, STATUS_CORES, Venda } from "@/utils/types/Venda";
 import ConfirmModal from "@/components/ConfirmModal";
 import { Produto } from "@/utils/types/Produto";
+import {Usuario} from "@/utils/types/Usuario";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
     const [produtos,  setProdutos]  = useState<Produto[]>([]);
+    const [usuarioLogado,  setUsuarioLogado]  = useState<Usuario | null>(null);
     const [busca,      setBusca]      = useState("");
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim,    setDataFim]    = useState("");
@@ -32,6 +35,13 @@ export default function VendasScreen() {
     const [selVis,    setSelVis]    = useState(false);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
+    useEffect(() => {
+        AsyncStorage.getItem("florihub_usuario").then((u) => {
+            setUsuarioLogado(JSON.parse(u) || null);
+            carregar();
+        });
+    }, []);
+
     const carregar = async () => {
         try {
             const [v, p] = await Promise.all([getVendas(), getProdutos()]);
@@ -44,10 +54,14 @@ export default function VendasScreen() {
         }
     };
 
-    useEffect(() => { carregar(); }, []);
-
     // Filtros
     const filtradas = vendas
+        .filter(v => {
+            if (usuarioLogado?.role === "VENDEDOR") {
+                return v.nomeVendedor === usuarioLogado.nome;
+            }
+            return true;
+        })
         .filter(v => filtro === "Todos" || v.status === filtro)
         .filter(v => {
             if (!busca) return true;
@@ -247,7 +261,7 @@ export default function VendasScreen() {
                             onPress={() => setFiltro(f)}
                             activeOpacity={0.8}
                         >
-                            <Text style={[styles.filtroText, filtro === f && styles.filtroTextAtivo]}> {f} </Text>
+                            <Text style={[styles.filtroText, filtro === f && styles.filtroTextAtivo]}>{f}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
@@ -285,7 +299,7 @@ export default function VendasScreen() {
                                 <View style={{ alignItems: "flex-end" }}>
                                     <Text style={styles.cardValor}>{brl(v.valorTotal)}</Text>
                                     <View style={[styles.badge, { backgroundColor: sc.bg }]}>
-                                        <Text style={[styles.badgeText, { color: sc.text }]}> {v.status} </Text>
+                                        <Text style={[styles.badgeText, { color: sc.text }]}>{v.status}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -295,7 +309,7 @@ export default function VendasScreen() {
                                 <View style={styles.itensBox}>
                                     {(v.itens || []).map((it, j) => (
                                         <View key={j} style={styles.itemRow}>
-                                            <Text style={styles.itemNome}> {it.nomeProduto} × {it.quantidade} </Text>
+                                            <Text style={styles.itemNome}>{it.nomeProduto} × {it.quantidade}</Text>
                                             <Text style={styles.itemValor}>{brl(it.subTotal)}</Text>
                                         </View>
                                     ))}
@@ -348,7 +362,7 @@ export default function VendasScreen() {
                                 <TouchableOpacity style={styles.qtdBtn} onPress={() => setQtd(q => Math.max(1, q - 1))}>
                                     <Text style={styles.qtdBtnText}>−</Text>
                                 </TouchableOpacity>
-                                <Text style={styles.qtdVal}> {qtd} </Text>
+                                <Text style={styles.qtdVal}>{qtd}</Text>
                                 <TouchableOpacity style={styles.qtdBtn} onPress={() => setQtd(q => q + 1)}>
                                     <Text style={styles.qtdBtnText}>+</Text>
                                 </TouchableOpacity>
@@ -362,8 +376,8 @@ export default function VendasScreen() {
                                 <View style={styles.itensForm}>
                                     {itens.map(i => (
                                         <View key={i.produto.id} style={styles.itemFormRow}>
-                                            <Text style={styles.itemFormNome}> {i.produto.nome} × {i.quantidade} </Text>
-                                            <Text style={styles.itemFormValor}> {brl(i.produto.preco * i.quantidade)} </Text>
+                                            <Text style={styles.itemFormNome}>{i.produto.nome} × {i.quantidade}</Text>
+                                            <Text style={styles.itemFormValor}>{brl(i.produto.preco * i.quantidade)}</Text>
                                             <TouchableOpacity onPress={() => removeItem(i.produto.id)}>
                                                 <Text style={styles.removeItem}>×</Text>
                                             </TouchableOpacity>

@@ -73,29 +73,50 @@ export const updateUsuario = (id: string, dados: object) => request("PUT", `/usu
 export const deleteUsuario = (id: string) => request("DELETE", `/usuarios/${id}`);
 
 export const getRelatorio = (params: {
-    inicio?: string;
-    fim?: string;
-    status?: string;
+    inicio?:     string;
+    fim?:        string;
+    status?:     string;
+    clienteId?:  string;
+    vendedorId?: string;  // ← novo
 }) => {
     const query = new URLSearchParams();
-    if (params.inicio) query.append("inicio", params.inicio);
-    if (params.fim)    query.append("fim",    params.fim);
-    if (params.status && params.status !== "Todos") query.append("status", params.status);
+    if (params.inicio)     query.append("inicio",     params.inicio);
+    if (params.fim)        query.append("fim",        params.fim);
+    if (params.status)     query.append("status",     params.status);
+    if (params.clienteId)  query.append("clienteId",  params.clienteId);
+    if (params.vendedorId) query.append("vendedorId", params.vendedorId);
 
     const qs = query.toString();
     return request("GET", `/relatorios/vendas${qs ? "?" + qs : ""}`);
 };
 
 export const getRelatorioPdfUrl = (params: {
-    inicio?: string;
-    fim?: string;
-    status?: string;
+    inicio?:    string;
+    fim?:       string;
+    status?:    string;
+    clienteId?: string;
 }) => {
     const query = new URLSearchParams();
-    if (params.inicio) query.append("inicio", params.inicio);
-    if (params.fim)    query.append("fim",    params.fim);
-    if (params.status) query.append("status", params.status);
+    if (params.inicio)    query.append("inicio",    params.inicio);
+    if (params.fim)       query.append("fim",       params.fim);
+    if (params.status)    query.append("status",    params.status);
+    if (params.clienteId) query.append("clienteId", params.clienteId);
 
     const qs = query.toString();
     return `${BASE_URL}/relatorios/vendas.pdf${qs ? "?" + qs : ""}`;
 };
+
+export const getClientes     = (busca?: string) =>
+    request("GET", `/clientes${busca ? `?busca=${busca}` : ""}`);
+
+export const getConsumidorFinal = () =>
+    request("GET", "/clientes/consumidor-final");
+
+export const createCliente   = (dados: object) =>
+    request("POST", "/clientes", dados);
+
+export const updateCliente   = (id: string, dados: object) =>
+    request("PUT", `/clientes/${id}`, dados);
+
+export const deleteCliente   = (id: string) =>
+    request("DELETE", `/clientes/${id}`);

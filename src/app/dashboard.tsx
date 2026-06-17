@@ -21,10 +21,11 @@ const METRICAS = (receita: number, finalizadas: Venda[], ticket: number, abertas
     { label: "Sem Estoque",    value: semEstoque,   sub: "sem reposição",                    accent: colors.primaryDark },
 ];
 
-const ATALHOS: { emoji: string; label: string; rota: "/produtos" | "/vendas" | "/relatorios" }[] = [
+const ATALHOS: { emoji: string; label: string; rota: "/produtos" | "/vendas" | "/clientes" | "/relatorios" }[] = [
     { emoji: "🌸", label: "Produtos",  rota: "/produtos"   },
     { emoji: "🌺", label: "Vendas",    rota: "/vendas"     },
     { emoji: "📊", label: "Relatório", rota: "/relatorios" },
+    { emoji: "👥", label: "Clientes", rota: "/clientes" },
 ];
 
 export default function DashboardScreen() {

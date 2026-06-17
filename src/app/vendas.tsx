@@ -5,7 +5,7 @@ import {
     ScrollView, KeyboardAvoidingView, Platform, TextInput,
 } from "react-native";
 import { colors } from "@/styles/global";
-import { createVenda, getProdutos, getVendas, updateVendaStatus } from "@/api/api";
+import {createVenda, getClientes, getConsumidorFinal, getProdutos, getVendas, updateVendaStatus} from "@/api/api";
 import {brl, ConfirmState, handleVoltar, mascaraData, parseData} from "@/utils/helpers";
 import { FILTROS, ItemForm, STATUS_CORES, Venda } from "@/utils/types/Venda";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -13,6 +13,7 @@ import { Produto } from "@/utils/types/Produto";
 import {Usuario} from "@/utils/types/Usuario";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {Cliente} from "@/utils/types/Cliente";
 
 export default function VendasScreen() {
     const [vendas,    setVendas]    = useState<Venda[]>([]);
@@ -29,6 +30,9 @@ export default function VendasScreen() {
 
     const [modalVis,  setModalVis]  = useState(false);
     const [itens,     setItens]     = useState<ItemForm[]>([]);
+    const [clientes,      setClientes]      = useState<Cliente[]>([]);
+    const [clienteSel,    setClienteSel]    = useState<Cliente | null>(null);
+    const [clienteSelVis, setClienteSelVis] = useState(false);
     const [prodSel,   setProdSel]   = useState<Produto | null>(null);
     const [qtd,       setQtd]       = useState(1);
     const [obs,       setObs]       = useState("");
@@ -47,10 +51,19 @@ export default function VendasScreen() {
 
     const carregar = async () => {
         try {
-            const [v, p] = await Promise.all([getVendas(), getProdutos()]);
+            const [v, p, c, cf] = await Promise.all([
+                getVendas(),
+                getProdutos(),
+                getClientes(),
+                getConsumidorFinal(),
+            ]);
             setVendas(v);
             setProdutos(p);
-            if (p.length > 0) setProdSel(p[0]);
+            setClientes(c);
+            setClienteSel(cf); // ← padrão: Consumidor Final
+
+            const produtosDisponiveis = p.filter((p: Produto) => p.ativo && p.quantidadeEstoque > 0);
+            if (produtosDisponiveis.length > 0) setProdSel(produtosDisponiveis[0]);
         } finally {
             setLoad(false);
             setRefresh(false);
@@ -125,6 +138,7 @@ export default function VendasScreen() {
         try {
             const payload = {
                 observacao: obs || null,
+                clienteId:  clienteSel?.id || null,
                 itens: itens.map(i => ({
                     produtoId:  i.produto.id,
                     quantidade: i.quantidade,
@@ -350,6 +364,15 @@ export default function VendasScreen() {
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <Text style={styles.modalTitle}>Nova Venda</Text>
 
+                            {/* Cliente */}
+                            <Text style={styles.label}>Cliente</Text>
+                            <TouchableOpacity style={styles.seletor} onPress={() => setClienteSelVis(true)} activeOpacity={0.8}>
+                                <Text style={styles.seletorText}>
+                                    {clienteSel ? clienteSel.nome : "Consumidor Final"}
+                                </Text>
+                                <Text style={styles.seletorArrow}>▼</Text>
+                            </TouchableOpacity>
+
                             {/* Seleção de produto */}
                             <Text style={styles.label}>Produto</Text>
                             <TouchableOpacity style={styles.seletor} onPress={() => setSelVis(true)} activeOpacity={0.8}>
@@ -403,7 +426,12 @@ export default function VendasScreen() {
                             />
 
                             <View style={styles.modalAcoes}>
-                                <TouchableOpacity style={styles.modalCancelarBtn} onPress={() => { setModalVis(false); setItens([]); }} activeOpacity={0.8}>
+                                <TouchableOpacity style={styles.modalCancelarBtn} onPress={() => {
+                                    setModalVis(false);
+                                    setItens([]);
+                                    setObs("");
+                                    getConsumidorFinal().then(cf => setClienteSel(cf));
+                                }} activeOpacity={0.8}>
                                     <Text style={styles.modalCancelarText}>Cancelar</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={[styles.salvarBtn, salvando && { opacity: 0.7 }]} onPress={salvarVenda} disabled={salvando} activeOpacity={0.8}>
@@ -415,6 +443,55 @@ export default function VendasScreen() {
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Modal seleção de cliente */}
+            <Modal visible={clienteSelVis} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Selecionar Cliente</Text>
+
+                        {/* Busca */}
+                        <TextInput
+                            style={[styles.input, { marginBottom: 8 }]}
+                            placeholder="Buscar cliente…"
+                            placeholderTextColor={colors.muted}
+                            onChangeText={async t => {
+                                const data = await getClientes(t);
+                                setClientes(data);
+                            }}
+                        />
+
+                        <FlatList
+                            data={clientes}
+                            keyExtractor={item => item.id}
+                            renderItem={({ item: c }) => (
+                                <TouchableOpacity
+                                    style={styles.produtoSelItem}
+                                    onPress={() => { setClienteSel(c); setClienteSelVis(false); }}
+                                    activeOpacity={0.8}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.produtoSelNome}>{c.nome}</Text>
+                                        {c.cpfCnpj
+                                            ? <Text style={{ fontSize: 11, color: colors.muted }}>{c.cpfCnpj}</Text>
+                                            : null
+                                        }
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={
+                                <Text style={{ textAlign: "center", color: colors.muted, marginTop: 20 }}>
+                                    Nenhum cliente encontrado.
+                                </Text>
+                            }
+                        />
+
+                        <TouchableOpacity style={styles.fecharBtn} onPress={() => setClienteSelVis(false)}>
+                            <Text style={styles.modalCancelarText}>Fechar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </Modal>
 
             {/* Modal seleção de produto */}
@@ -436,7 +513,7 @@ export default function VendasScreen() {
                                 </TouchableOpacity>
                             )}
                         />
-                        <TouchableOpacity style={styles.modalCancelarBtn} onPress={() => setSelVis(false)}>
+                        <TouchableOpacity style={styles.fecharBtn} onPress={() => setSelVis(false)}>
                             <Text style={styles.modalCancelarText}>Fechar</Text>
                         </TouchableOpacity>
                     </View>
@@ -537,6 +614,7 @@ const styles = StyleSheet.create({
     modalCancelarText:{ fontSize: 14, color: colors.muted, fontWeight: "600" },
     salvarBtn:        { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: "center" },
     salvarText:       { fontSize: 14, color: "#fff", fontWeight: "600" },
+    fecharBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 12 },
 
     // Modal seleção de produto
     produtoSelItem:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.background },

@@ -1,10 +1,10 @@
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import {
     View, Text, ScrollView, StyleSheet,
-    ActivityIndicator, TouchableOpacity, Platform,
+    ActivityIndicator, TouchableOpacity, Platform, Modal, FlatList,
 } from "react-native";
 import { colors } from "@/styles/global";
-import { getRelatorio, getRelatorioPdfUrl, getToken } from "@/api/api";
+import {getClientes, getRelatorio, getRelatorioPdfUrl, getToken} from "@/api/api";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing   from "expo-sharing";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,26 +13,47 @@ import { TextInput } from "react-native";
 import { Relatorio } from "@/utils/types/Relatorio";
 import { STATUS_CORES } from "@/utils/types/Venda";
 import ConfirmModal from "@/components/ConfirmModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Usuario } from "@/utils/types/Usuario";
+import { Cliente } from "@/utils/types/Cliente";
 
 export default function RelatorioScreen() {
+    const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
     const [relatorio, setRelatorio] = useState<Relatorio | null>(null);
     const [load,      setLoad]      = useState(false);
+    const [clienteFiltro,    setClienteFiltro]    = useState<Cliente | null>(null);
+    const [clienteFiltroVis, setClienteFiltroVis] = useState(false);
+    const [clientesFiltro,   setClientesFiltro]   = useState<Cliente[]>([]);
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim,    setDataFim]    = useState("");
     const [status,     setStatus]     = useState("Todos");
     const [baixando, setBaixando] = useState(false);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
+    useEffect(() => {
+        AsyncStorage.getItem("florihub_usuario").then(u => {
+            if (u) setUsuarioLogado(JSON.parse(u));
+        });
+        getClientes().then((data: Cliente[]) => {
+            const CONSUMIDOR_FINAL_ID = "00000000-0000-0000-0000-000000000001";
+            setClientesFiltro(data.filter(c => c.id !== CONSUMIDOR_FINAL_ID));
+        });
+    }, []);
+
     const insets = useSafeAreaInsets();
+
+    const filtros = () => ({
+        inicio:     dataInicio ? parseDateToISO(dataInicio) : undefined,
+        fim:        dataFim    ? parseDateToISO(dataFim)    : undefined,
+        status:     status !== "Todos" ? status : undefined,
+        clienteId:  clienteFiltro?.id  || undefined,
+        vendedorId: usuarioLogado?.role === "VENDEDOR" ? usuarioLogado.id : undefined,
+    });
 
     const gerar = async () => {
         setLoad(true);
         try {
-            const data = await getRelatorio({
-                inicio: dataInicio ? parseDateToISO(dataInicio) : undefined,
-                fim:    dataFim    ? parseDateToISO(dataFim)    : undefined,
-                status: status !== "Todos" ? status : undefined,
-            });
+            const data = await getRelatorio(filtros())
             setRelatorio(data);
         } catch (e: any) {
             setConfirm({
@@ -110,8 +131,6 @@ export default function RelatorioScreen() {
         }
     };
 
-
-
     return (
         <View style={styles.container}>
             {confirm && (
@@ -139,6 +158,23 @@ export default function RelatorioScreen() {
 
                 {/* Filtros */}
                 <View style={styles.filtrosBox}>
+                    <Text style={styles.filtroLabel}>Cliente</Text>
+                    <TouchableOpacity
+                        style={styles.seletorFiltro}
+                        onPress={() => setClienteFiltroVis(true)}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={[styles.seletorFiltroText, !clienteFiltro && { color: colors.muted }]}>
+                            {clienteFiltro ? clienteFiltro.nome : "Todos os clientes"}
+                        </Text>
+                        {clienteFiltro && (
+                            <TouchableOpacity onPress={() => setClienteFiltro(null)}>
+                                <Text style={{ color: colors.rose, fontSize: 16, paddingHorizontal: 8 }}>×</Text>
+                            </TouchableOpacity>
+                        )}
+                        <Text style={styles.seletorArrow}>▼</Text>
+                    </TouchableOpacity>
+
                     <Text style={styles.filtroLabel}>Período</Text>
                     <View style={styles.datas}>
                         <TextInput
@@ -268,6 +304,48 @@ export default function RelatorioScreen() {
                     </TouchableOpacity>
                 )}
             </ScrollView>
+            <Modal visible={clienteFiltroVis} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Filtrar por Cliente</Text>
+
+                        <TextInput
+                            style={[styles.input, { marginBottom: 8 }]}
+                            placeholder="Buscar cliente…"
+                            placeholderTextColor={colors.muted}
+                            onChangeText={async t => {
+                                const data = await getClientes(t);
+                                const CONSUMIDOR_FINAL_ID = "00000000-0000-0000-0000-000000000001";
+                                setClientesFiltro(data.filter((c: Cliente) => c.id !== CONSUMIDOR_FINAL_ID));
+                            }}
+                        />
+
+                        <FlatList
+                            data={clientesFiltro}
+                            keyExtractor={item => item.id}
+                            renderItem={({ item: c }) => (
+                                <TouchableOpacity
+                                    style={styles.clienteSelItem}
+                                    onPress={() => { setClienteFiltro(c); setClienteFiltroVis(false); }}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.clienteSelNome}>{c.nome}</Text>
+                                    {c.cpfCnpj ? <Text style={styles.clienteSelDoc}>{c.cpfCnpj}</Text> : null}
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={
+                                <Text style={{ textAlign: "center", color: colors.muted, marginTop: 20 }}>
+                                    Nenhum cliente encontrado.
+                                </Text>
+                            }
+                        />
+
+                        <TouchableOpacity style={styles.fecharBtn} onPress={() => setClienteFiltroVis(false)}>
+                            <Text style={styles.fecharBtnText}>Fechar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -287,7 +365,6 @@ const styles = StyleSheet.create({
     filtrosBox:      { backgroundColor: "#fff", margin: 16, borderRadius: 12, padding: 16, elevation: 2 },
     filtroLabel:     { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 8, marginTop: 8 },
     datas:           { flexDirection: "row", gap: 8 },
-    input:           { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, color: colors.text },
     statusRow:       { flexDirection: "row", gap: 8, paddingVertical: 4 },
     statusBtn:       { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.background },
     statusBtnAtivo:  { backgroundColor: colors.primary },
@@ -295,6 +372,18 @@ const styles = StyleSheet.create({
     statusTextAtivo: { color: "#fff" },
     gerarBtn:        { backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 16 },
     gerarBtnText:    { color: "#fff", fontWeight: "700", fontSize: 15 },
+    seletorFiltro:     { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, marginBottom: 4 },
+    seletorFiltroText: { flex: 1, fontSize: 13, color: colors.text },
+    seletorArrow:      { fontSize: 12, color: colors.muted },
+    modalOverlay:      { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+    modalBox:          { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "90%" },
+    modalTitle:        { fontSize: 20, fontWeight: "700", color: colors.primaryDark, marginBottom: 20 },
+    input:             { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, color: colors.text },
+    clienteSelItem:    { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.background },
+    clienteSelNome:    { fontSize: 14, color: colors.text, fontWeight: "600" },
+    clienteSelDoc:     { fontSize: 11, color: colors.muted, marginTop: 2 },
+    fecharBtn:         { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center", marginTop: 12 },
+    fecharBtnText:     { fontSize: 14, color: colors.muted, fontWeight: "600" },
 
     // Métricas
     metricas:        { flexDirection: "row", padding: 16, gap: 8 },

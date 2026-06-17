@@ -20,7 +20,7 @@ Para o backend consulte a [FloriHub API](https://github.com/gabrielfernandesgf/f
 
 ## 📱 Sobre o projeto
 
-O **FloriHub App** permite gerenciar produtos, vendas, usuários e relatórios de uma floricultura em qualquer dispositivo. O mesmo projeto roda no celular via **Expo Go** ou build nativo, e no navegador via **Expo Web** — sem necessidade de projetos separados.
+O **FloriHub App** permite gerenciar produtos, vendas, clientes, usuários e relatórios de uma floricultura em qualquer dispositivo. O mesmo projeto roda no celular via **Expo Go** ou build nativo, e no navegador via **Expo Web** — sem necessidade de projetos separados.
 
 ---
 
@@ -97,6 +97,7 @@ src/
 │   ├── dashboard.tsx       # Dashboard com métricas e atalhos
 │   ├── produtos.tsx        # CRUD de produtos (grid no web)
 │   ├── vendas.tsx          # Registro e acompanhamento de vendas
+│   ├── clientes.tsx        # CRUD de clientes com endereço expansível
 │   ├── usuarios.tsx        # Gerenciamento de usuários (ADMIN)
 │   └── relatorio.tsx       # Relatório de vendas com exportação PDF
 ├── components/
@@ -108,6 +109,7 @@ src/
 │   └── types/
 │       ├── Produto.ts      # Interfaces e constantes de produto
 │       ├── Venda.ts        # Interfaces e constantes de venda
+│       ├── Cliente.ts      # Interfaces de cliente e endereço
 │       ├── Usuario.ts      # Interfaces de usuário
 │       └── Relatorio.ts    # Interfaces de relatório
 └── web/
@@ -124,9 +126,10 @@ src/
 | `login` | Autenticação com e-mail e senha |
 | `dashboard` | Métricas de receita, vendas abertas, estoque crítico e atalhos de navegação |
 | `produtos` | Catálogo com criação, edição e desativação — grid de 3 colunas no web |
-| `vendas` | Registro de vendas, filtros por status, busca por cliente e período |
+| `vendas` | Registro de vendas com seleção obrigatória de cliente, filtros por status e período |
+| `clientes` | Cadastro de clientes com busca por nome/CPF-CNPJ e seção de endereço expansível |
 | `usuarios` | Gerenciamento de usuários — exclusivo para ADMIN, grid no web |
-| `relatorio` | Relatório com métricas e top produtos, exportação em PDF |
+| `relatorio` | Relatório com métricas, top produtos e filtro por cliente, exportação em PDF |
 
 ---
 
@@ -150,6 +153,7 @@ headers: {
 | Dashboard | ✅ | ✅ |
 | Produtos (visualizar) | ✅ | ✅ |
 | Produtos (criar/editar/desativar) | ✅ | ✅ |
+| Clientes (visualizar/criar/editar) | ✅ | ✅ |
 | Vendas (próprias) | ✅ | ✅ |
 | Vendas (todas) | ❌ | ✅ |
 | Usuários | ❌ | ✅ |
@@ -157,9 +161,41 @@ headers: {
 
 ---
 
+## 🧾 Clientes
+
+Todo cliente cadastrado possui nome (único campo obrigatório), CPF/CNPJ, telefone, e-mail, observações e um endereço estruturado opcional (CEP, logradouro, número, complemento, bairro, cidade e UF). O sistema mantém um cliente padrão protegido, **Consumidor Final**, que não pode ser removido — garantindo que toda venda sempre tenha um cliente associado.
+
+```ts
+interface Cliente {
+  id: string;
+  nome: string;
+  cpfCnpj?: string;
+  telefone?: string;
+  email?: string;
+  endereco?: Endereco;
+  observacoes?: string;
+}
+```
+
+---
+
+## 🛒 Vendas
+
+A criação de uma venda **exige a seleção de um cliente** — cadastrado previamente ou o "Consumidor Final" padrão — antes da adição de produtos. Sem cliente selecionado, a venda não pode ser registrada.
+
+```ts
+interface VendaRequest {
+  clienteId: string; // obrigatório
+  itens: VendaItemRequest[];
+  observacao?: string;
+}
+```
+
+---
+
 ## 📄 Exportação de PDF
 
-O relatório de vendas pode ser exportado em PDF com filtros de período e status. O comportamento varia por plataforma:
+O relatório de vendas pode ser exportado em PDF com filtros de cliente, período e status. O comportamento varia por plataforma:
 
 **Mobile** — download autenticado via `expo-file-system` e compartilhamento nativo:
 ```ts
@@ -183,8 +219,9 @@ link.click();
 ## 📝 Observações
 
 - **Cross-platform:** o mesmo código roda no Android, iOS e navegador web sem alterações.
-- **Grid responsivo:** telas de produtos e usuários exibem 3 colunas no web e 1 coluna no mobile.
-- **Soft delete:** produtos e usuários desativados são ocultados das listagens sem serem removidos do banco.
+- **Grid responsivo:** telas de produtos, clientes e usuários exibem 3 colunas no web e 1 coluna no mobile.
+- **Cliente obrigatório na venda:** toda venda precisa de um cliente vinculado; o padrão "Consumidor Final" cobre os casos em que nenhum cliente específico é informado.
+- **Soft delete:** produtos, clientes e usuários desativados são ocultados das listagens sem serem removidos do banco.
 - **Snapshot de preço:** o preço registrado na venda não muda mesmo que o produto seja editado posteriormente.
 - **Restauração de estoque:** ao cancelar uma venda, o estoque dos produtos é restaurado automaticamente pelo backend.
 - **Emulador Android:** usa `http://10.0.2.2:8080` automaticamente — `localhost` não funciona no emulador.

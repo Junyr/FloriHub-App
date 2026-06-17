@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { colors } from "@/styles/global";
 import { getClientes, createCliente, updateCliente, deleteCliente } from "@/api/api";
-import { brl, ConfirmState, handleVoltar } from "@/utils/helpers";
+import { ConfirmState, handleVoltar } from "@/utils/helpers";
 import { Cliente, FormCliente, FORM_VAZIO_CLIENTE } from "@/utils/types/Cliente";
 import ConfirmModal from "@/components/ConfirmModal";
 

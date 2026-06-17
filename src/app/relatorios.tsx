@@ -13,12 +13,9 @@ import { TextInput } from "react-native";
 import { Relatorio } from "@/utils/types/Relatorio";
 import { STATUS_CORES } from "@/utils/types/Venda";
 import ConfirmModal from "@/components/ConfirmModal";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Usuario } from "@/utils/types/Usuario";
 import { Cliente } from "@/utils/types/Cliente";
 
 export default function RelatorioScreen() {
-    const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
     const [relatorio, setRelatorio] = useState<Relatorio | null>(null);
     const [load,      setLoad]      = useState(false);
     const [clienteFiltro,    setClienteFiltro]    = useState<Cliente | null>(null);
@@ -31,9 +28,6 @@ export default function RelatorioScreen() {
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
     useEffect(() => {
-        AsyncStorage.getItem("florihub_usuario").then(u => {
-            if (u) setUsuarioLogado(JSON.parse(u));
-        });
         getClientes().then((data: Cliente[]) => {
             const CONSUMIDOR_FINAL_ID = "00000000-0000-0000-0000-000000000001";
             setClientesFiltro(data.filter(c => c.id !== CONSUMIDOR_FINAL_ID));
@@ -47,7 +41,6 @@ export default function RelatorioScreen() {
         fim:        dataFim    ? parseDateToISO(dataFim)    : undefined,
         status:     status !== "Todos" ? status : undefined,
         clienteId:  clienteFiltro?.id  || undefined,
-        vendedorId: usuarioLogado?.role === "VENDEDOR" ? usuarioLogado.id : undefined,
     });
 
     const gerar = async () => {

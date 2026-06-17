@@ -1,9 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import {router} from "expo-router";
+import { router } from "expo-router";
 
+// Configuração
 const BASE_URL = Platform.OS === "web"
-    ? "http://localhost:8080"      // navegador
+    ? "http://localhost:8080"
     : "http://10.0.2.2:8080";
 
 const TOKEN_KEY = "florihub_token";
@@ -11,6 +12,7 @@ const TOKEN_KEY = "florihub_token";
 export const getToken = () => AsyncStorage.getItem(TOKEN_KEY);
 const setToken = (t: string) => AsyncStorage.setItem(TOKEN_KEY, t);
 
+// Request base
 async function request(method: string, path: string, body?: object) {
     const token = await getToken();
 
@@ -40,6 +42,7 @@ async function request(method: string, path: string, body?: object) {
     return data;
 }
 
+// Autenticação
 export async function login(email: string, senha: string) {
     const data = await request("POST", "/auth/login", { email, senha });
     await setToken(data.token);
@@ -56,35 +59,44 @@ export const logout = async () => {
     await AsyncStorage.removeItem("florihub_usuario");
 };
 
-export const getVendas   = () => request("GET", "/vendas");
-export const getProdutos = () => request("GET", "/produtos");
+// Produtos
+export const getProdutos     = ()                          => request("GET",    "/produtos");
+export const createProduto   = (dados: object)             => request("POST",   "/produtos", dados);
+export const updateProduto   = (id: string, dados: object) => request("PUT",    `/produtos/${id}`, dados);
+export const deleteProduto   = (id: string)                => request("DELETE", `/produtos/${id}`);
 
-export const createProduto = (dados: object) => request("POST", "/produtos", dados);
-export const updateProduto = (id: string, dados: object) => request("PUT", `/produtos/${id}`, dados);
-export const deleteProduto = (id: string) => request("DELETE", `/produtos/${id}`);
-
-export const createVenda        = (dados: object) => request("POST", "/vendas", dados);
-export const updateVendaStatus  = (id: string, status: string) =>
+// Vendas
+export const getVendas       = ()                                    => request("GET",   "/vendas");
+export const createVenda     = (dados: object)                       => request("POST",  "/vendas", dados);
+export const updateVendaStatus = (id: string, status: string)        =>
     request("PATCH", `/vendas/${id}/status?status=${status}`);
 
-export const getUsuarios = () => request("GET", "/usuarios");
-export const createUsuario = (dados: object) => request("POST", "/usuarios", dados);
-export const updateUsuario = (id: string, dados: object) => request("PUT", `/usuarios/${id}`, dados);
-export const deleteUsuario = (id: string) => request("DELETE", `/usuarios/${id}`);
+// Usuários
+export const getUsuarios     = ()                          => request("GET",    "/usuarios");
+export const createUsuario   = (dados: object)             => request("POST",   "/usuarios", dados);
+export const updateUsuario   = (id: string, dados: object) => request("PUT",    `/usuarios/${id}`, dados);
+export const deleteUsuario   = (id: string)                => request("DELETE", `/usuarios/${id}`);
 
+// Clientes
+export const getClientes        = (busca?: string) =>
+    request("GET", `/clientes${busca ? `?busca=${busca}` : ""}`);
+export const getConsumidorFinal = ()                          => request("GET",    "/clientes/consumidor-final");
+export const createCliente      = (dados: object)             => request("POST",   "/clientes", dados);
+export const updateCliente      = (id: string, dados: object) => request("PUT",    `/clientes/${id}`, dados);
+export const deleteCliente      = (id: string)                => request("DELETE", `/clientes/${id}`);
+
+// Relatório
 export const getRelatorio = (params: {
-    inicio?:     string;
-    fim?:        string;
-    status?:     string;
-    clienteId?:  string;
-    vendedorId?: string;  // ← novo
+    inicio?:    string;
+    fim?:       string;
+    status?:    string;
+    clienteId?: string;
 }) => {
     const query = new URLSearchParams();
-    if (params.inicio)     query.append("inicio",     params.inicio);
-    if (params.fim)        query.append("fim",        params.fim);
-    if (params.status)     query.append("status",     params.status);
-    if (params.clienteId)  query.append("clienteId",  params.clienteId);
-    if (params.vendedorId) query.append("vendedorId", params.vendedorId);
+    if (params.inicio)    query.append("inicio",    params.inicio);
+    if (params.fim)       query.append("fim",       params.fim);
+    if (params.status)    query.append("status",    params.status);
+    if (params.clienteId) query.append("clienteId", params.clienteId);
 
     const qs = query.toString();
     return request("GET", `/relatorios/vendas${qs ? "?" + qs : ""}`);
@@ -105,18 +117,3 @@ export const getRelatorioPdfUrl = (params: {
     const qs = query.toString();
     return `${BASE_URL}/relatorios/vendas.pdf${qs ? "?" + qs : ""}`;
 };
-
-export const getClientes     = (busca?: string) =>
-    request("GET", `/clientes${busca ? `?busca=${busca}` : ""}`);
-
-export const getConsumidorFinal = () =>
-    request("GET", "/clientes/consumidor-final");
-
-export const createCliente   = (dados: object) =>
-    request("POST", "/clientes", dados);
-
-export const updateCliente   = (id: string, dados: object) =>
-    request("PUT", `/clientes/${id}`, dados);
-
-export const deleteCliente   = (id: string) =>
-    request("DELETE", `/clientes/${id}`);
